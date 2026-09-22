@@ -5,10 +5,10 @@
  */
 
 // URL de tu proyecto Supabase (ej: https://xxxxx.supabase.co)
-export const SUPABASE_URL = 'https://TU_PROYECTO.supabase.co';
+export const SUPABASE_URL = 'https://dycmmrwigyyanwzsosjv.supabase.co';
 
 // Anon Key pública de Supabase (la encuentras en Settings > API)
-export const SUPABASE_ANON_KEY = 'TU_ANON_KEY_AQUI';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5Y21tcndpZ3l5YW53enNvc2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwODIyMzgsImV4cCI6MjEwNTY1ODIzOH0.wRJU3tp9I1BWIOgL9uWgkCwMhR44y51oTAqW7jPTD5M';
 
 // Nombre del bucket de Storage para imágenes de productos
 export const STORAGE_BUCKET = 'productos';
