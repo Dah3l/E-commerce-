@@ -1,8 +1,5 @@
 # Redirecciones para Cloudflare Pages
 # https://developers.cloudflare.com/pages/platform/redirects/
 
-# SPA fallback (opcional, si se usa routing del lado del cliente)
-/* /index.html 200
-
 # Admin redirect (manejado principalmente por JS)
 /admin /admin/login.html 302
