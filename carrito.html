@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito - Mi Tienda</title>
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <header class="site-header" role="banner">
+    <div class="container"><div class="header-main">
+      <a href="/" class="header__logo">🛒 Mi Tienda</a>
+      <a href="/carrito.html" class="header__cart" aria-label="Ver carrito"><span class="cart-icon">🛒</span><span class="cart-count" style="display: none;">0</span></a>
+    </div></div>
+  </header>
+
+  <main id="main-content" class="cart-page" role="main">
+    <div class="container">
+      <h1 class="section__title">Tu Carrito</h1>
+      <div id="cartContent"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="container"><div class="footer__bottom"><p>&copy; 2024 Mi Tienda Online</p></div></div></footer>
+  <nav class="mobile-nav">
+    <a href="/" class="mobile-nav__item"><span class="mobile-nav__icon">🏠</span><span>Inicio</span></a>
+    <a href="/#categorias" class="mobile-nav__item"><span class="mobile-nav__icon">📂</span><span>Categorías</span></a>
+    <a href="/carrito.html" class="mobile-nav__item active"><span class="mobile-nav__icon">🛒</span><span>Carrito</span></a>
+    <a href="/contacto.html" class="mobile-nav__item"><span class="mobile-nav__icon">📞</span><span>Contacto</span></a>
+  </nav>
+
+  <script type="module">
+    import { getCartItems, removeFromCart, updateQuantity, getCartSubtotal, clearCart, checkoutViaWhatsApp } from './js/carrito.js';
+    import { formatPrice } from './js/utils.js';
+    import { showToast } from './js/ui.js';
+
+    function renderCart() {
+      const items = getCartItems();
+      const subtotal = getCartSubtotal();
+      const container = document.getElementById('cartContent');
+      
+      if (items.length === 0) {
+        container.innerHTML = '<div class="cart-empty"><div class="cart-empty__icon">🛒</div><h2 class="cart-empty__title">Tu carrito está vacío</h2><p class="cart-empty__text">Agrega productos para comenzar tu compra</p><a href="/" class="btn btn--primary">Ver Productos</a></div>';
+        return;
+      }
+
+      container.innerHTML = `<div class="cart-container">
+        <div class="cart-items">${items.map(item => `
+          <div class="cart-item">
+            <img src="${item.imagen_url || '/assets/icons/placeholder.svg'}" alt="${item.nombre}" class="cart-item__image">
+            <div class="cart-item__info">
+              <h3 class="cart-item__name">${item.nombre}</h3>
+              <p class="cart-item__price">${formatPrice(item.precio)}</p>
+              <div class="cart-item__actions">
+                <div class="quantity-selector">
+                  <button class="quantity-btn" onclick="updateQty('${item.producto_id}', ${item.cantidad - 1})">-</button>
+                  <input type="number" class="quantity-input" value="${item.cantidad}" min="1" onchange="updateQty('${item.producto_id}', parseInt(this.value))">
+                  <button class="quantity-btn" onclick="updateQty('${item.producto_id}', ${item.cantidad + 1})">+</button>
+                </div>
+                <button class="cart-item__remove" onclick="removeItem('${item.producto_id}')" aria-label="Eliminar">🗑️</button>
+              </div>
+            </div>
+          </div>`).join('')}</div>
+        <div class="cart-summary">
+          <h2 class="cart-summary__title">Resumen</h2>
+          <div class="cart-summary__row"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>
+          <div class="cart-summary__row cart-summary__row--total"><span>Total</span><span>${formatPrice(subtotal)}</span></div>
+          <button class="btn btn--primary btn--lg cart-summary__btn" onclick="checkout()">✅ Finalizar por WhatsApp</button>
+          <button class="btn btn--secondary btn--block" onclick="clearCartAndRefresh()">🗑️ Vaciar Carrito</button>
+        </div>
+      </div>`;
+    }
+
+    window.updateQty = (id, qty) => { updateQuantity(id, qty); renderCart(); updateCounter(); };
+    window.removeItem = (id) => { removeFromCart(id); showToast('Producto eliminado', 'info'); renderCart(); updateCounter(); };
+    window.clearCartAndRefresh = () => { clearCart(); renderCart(); updateCounter(); showToast('Carrito vaciado', 'info'); };
+    window.checkout = () => checkoutViaWhatsApp('1234567890', 'USD');
+
+    function updateCounter() {
+      const count = getCartItems().reduce((t, i) => t + i.cantidad, 0);
+      document.querySelectorAll('.cart-count').forEach(el => { el.textContent = count; el.style.display = count > 0 ? 'flex' : 'none'; });
+    }
+
+    document.addEventListener('DOMContentLoaded', renderCart);
+    window.addEventListener('cart-updated', renderCart);
+  </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Panel Admin</title>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-sidebar__header">
+        <a href="/admin/dashboard.html" class="admin-sidebar__logo">🛒 Admin Panel</a>
+      </div>
+      
+      <nav class="admin-sidebar__nav">
+        <ul class="admin-nav__list">
+          <li class="admin-nav__item">
+            <a href="/admin/dashboard.html" class="admin-nav__link active">
+              <span class="admin-nav__icon">📊</span>
+              Dashboard
+            </a>
+          </li>
+          <li class="admin-nav__item">
+            <a href="/admin/productos.html" class="admin-nav__link">
+              <span class="admin-nav__icon">📦</span>
+              Productos
+            </a>
+          </li>
+          <li class="admin-nav__item">
+            <a href="/admin/categorias.html" class="admin-nav__link">
+              <span class="admin-nav__icon">📂</span>
+              Categorías
+            </a>
+          </li>
+          <li class="admin-nav__item">
+            <a href="/admin/configuracion.html" class="admin-nav__link">
+              <span class="admin-nav__icon">⚙️</span>
+              Configuración
+            </a>
+          </li>
+          <li class="admin-nav__item" style="margin-top: 20px;">
+            <a href="/" class="admin-nav__link" target="_blank">
+              <span class="admin-nav__icon">🏪</span>
+              Ver Tienda
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="admin-main">
+      <!-- Header -->
+      <header class="admin-header">
+        <button class="admin-sidebar-toggle" aria-label="Toggle sidebar" onclick="toggleSidebar()">
+          ☰
+        </button>
+        <h1 class="admin-header__title">Dashboard</h1>
+        <div class="admin-header__actions">
+          <button class="btn btn--secondary logout-btn" onclick="logout()">
+            🚪 Salir
+          </button>
+        </div>
+      </header>
+
+      <!-- Contenido del Dashboard -->
+      <div class="container" style="padding: var(--spacing-6);">
+        <!-- Stats Cards -->
+        <div class="dashboard-stats" id="statsContainer">
+          <div class="stat-card stat-card--primary">
+            <div class="stat-card__header">
+              <span class="stat-card__icon">📦</span>
+            </div>
+            <div class="stat-card__value" id="totalProductos">-</div>
+            <p class="stat-card__label">Total Productos</p>
+          </div>
+          
+          <div class="stat-card stat-card--secondary">
+            <div class="stat-card__header">
+              <span class="stat-card__icon">📂</span>
+            </div>
+            <div class="stat-card__value" id="totalCategorias">-</div>
+            <p class="stat-card__label">Categorías</p>
+          </div>
+          
+          <div class="stat-card stat-card--warning">
+            <div class="stat-card__header">
+              <span class="stat-card__icon">⚠️</span>
+            </div>
+            <div class="stat-card__value" id="productosSinStock">-</div>
+            <p class="stat-card__label">Sin Stock</p>
+          </div>
+          
+          <div class="stat-card stat-card--danger">
+            <div class="stat-card__header">
+              <span class="stat-card__icon">🏷️</span>
+            </div>
+            <div class="stat-card__value" id="productosDestacados">-</div>
+            <p class="stat-card__label">Destacados</p>
+          </div>
+        </div>
+
+        <!-- Alertas -->
+        <div id="alertasContainer"></div>
+
+        <!-- Accesos Rápidos -->
+        <div class="admin-form" style="margin-top: var(--spacing-6);">
+          <div class="admin-form__header">
+            <h2 class="admin-form__title">Accesos Rápidos</h2>
+          </div>
+          <div style="display: flex; gap: var(--spacing-3); flex-wrap: wrap;">
+            <a href="/admin/productos.html" class="btn btn--primary">
+              ➕ Nuevo Producto
+            </a>
+            <a href="/admin/categorias.html" class="btn btn--secondary">
+              📂 Gestionar Categorías
+            </a>
+            <a href="/admin/configuracion.html" class="btn btn--secondary">
+              ⚙️ Configurar Tienda
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { isAuthenticated, logout } from '../js/auth.js';
+    import { supabase } from '../js/supabase-client.js';
+    import { showToast } from '../js/ui.js';
+
+    // Guard de autenticación
+    if (!isAuthenticated()) {
+      window.location.href = '/admin/login.html';
+    }
+
+    // Toggle sidebar en móvil
+    window.toggleSidebar = () => {
+      const sidebar = document.getElementById('adminSidebar');
+      sidebar.classList.toggle('admin-sidebar--open');
+    };
+
+    // Logout
+    window.logout = () => {
+      sessionStorage.removeItem('admin_session');
+      window.location.href = '/admin/login.html';
+    };
+
+    // Cargar estadísticas
+    async function loadStats() {
+      try {
+        // Total productos
+        const { count: productosCount } = await supabase
+          .from('productos')
+          .select('*', { count: 'exact', head: true });
+        
+        // Total categorías
+        const { count: categoriasCount } = await supabase
+          .from('categorias')
+          .select('*', { count: 'exact', head: true });
+        
+        // Productos sin stock
+        const { count: sinStockCount } = await supabase
+          .from('productos')
+          .select('*', { count: 'exact', head: true })
+          .eq('stock', 0);
+        
+        // Productos destacados
+        const { count: destacadosCount } = await supabase
+          .from('productos')
+          .select('*', { count: 'exact', head: true })
+          .eq('destacado', true);
+        
+        // Actualizar UI
+        document.getElementById('totalProductos').textContent = productosCount || 0;
+        document.getElementById('totalCategorias').textContent = categoriasCount || 0;
+        document.getElementById('productosSinStock').textContent = sinStockCount || 0;
+        document.getElementById('productosDestacados').textContent = destacadosCount || 0;
+        
+        // Mostrar alertas si hay productos sin stock
+        if (sinStockCount > 0) {
+          mostrarAlertaSinStock(sinStockCount);
+        }
+      } catch (error) {
+        console.error('Error cargando stats:', error);
+        showToast('Error cargando estadísticas', 'error');
+      }
+    }
+
+    function mostrarAlertaSinStock(count) {
+      const container = document.getElementById('alertasContainer');
+      container.innerHTML = `
+        <div class="admin-alert admin-alert--warning">
+          <strong>⚠️ Atención:</strong> Hay ${count} producto${count > 1 ? 's' : ''} sin stock. 
+          <a href="/admin/productos.html" style="color: #92400E; text-decoration: underline;">Revisar ahora</a>
+        </div>
+      `;
+    }
+
+    // Cargar al inicializar
+    document.addEventListener('DOMContentLoaded', loadStats);
+  </script>
+</body>
+</html>

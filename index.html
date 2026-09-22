@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tienda online de comida y productos de aseo personal. Envíos a domicilio.">
+  <meta name="theme-color" content="#6B8E23">
+  
+  <!-- Preconnect a Supabase para mejor rendimiento -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  
+  <title>Mi Tienda Online - Inicio</title>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  
+  <!-- Favicon (opcional) -->
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+</head>
+<body>
+  <!-- Skip link para accesibilidad -->
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+  
+  <!-- Header / Navegación -->
+  <header class="site-header" role="banner">
+    <div class="container">
+      <div class="header-main">
+        <!-- Logo -->
+        <a href="/" class="header__logo">🛒 Mi Tienda</a>
+        
+        <!-- Botón hamburguesa móvil -->
+        <button 
+          class="hamburger-btn" 
+          aria-label="Menú"
+          aria-expanded="false"
+          aria-controls="mobile-nav"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        
+        <!-- Navegación desktop -->
+        <nav class="desktop-nav" aria-label="Navegación principal">
+          <ul class="desktop-nav__list">
+            <li><a href="/" class="desktop-nav__link active">Inicio</a></li>
+            <li><a href="/#categorias" class="desktop-nav__link">Categorías</a></li>
+            <li><a href="/contacto.html" class="desktop-nav__link">Contacto</a></li>
+          </ul>
+        </nav>
+        
+        <!-- Carrito icon -->
+        <a href="/carrito.html" class="header__cart" aria-label="Ver carrito">
+          <span class="cart-icon">🛒</span>
+          <span class="cart-count" style="display: none;">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main id="main-content" role="main">
+    <!-- Hero Section -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <h1 id="hero-title" class="hero__title">Bienvenido a Mi Tienda</h1>
+        <p class="hero__subtitle">Productos de comida y aseo personal directamente a tu puerta</p>
+        
+        <!-- Buscador -->
+        <form class="search-form hero__search" role="search" action="/busqueda.html">
+          <input 
+            type="search" 
+            class="search-input" 
+            placeholder="Buscar productos..." 
+            aria-label="Buscar productos"
+            name="q"
+          >
+          <button type="submit" class="search-btn" aria-label="Buscar">
+            🔍
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Filtros de Categoría -->
+    <section class="section section--light" aria-labelledby="categories-title">
+      <div class="container">
+        <h2 id="categories-title" class="section__title">Categorías</h2>
+        <div class="category-filters" role="group" aria-label="Filtros por categoría">
+          <!-- Se carga dinámicamente desde JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Productos Destacados -->
+    <section class="section home-featured" aria-labelledby="featured-title">
+      <div class="container">
+        <h2 id="featured-title" class="section__title">Productos Destacados</h2>
+        <div class="products-grid" id="featured-products">
+          <!-- Skeletons de carga -->
+          <div class="product-card product-card--skeleton">
+            <div class="product-card__image-container">
+              <div class="skeleton skeleton--image"></div>
+            </div>
+            <div class="product-card__info">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text skeleton--text-short"></div>
+              <div class="skeleton skeleton--btn"></div>
+            </div>
+          </div>
+          <div class="product-card product-card--skeleton">
+            <div class="product-card__image-container">
+              <div class="skeleton skeleton--image"></div>
+            </div>
+            <div class="product-card__info">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text skeleton--text-short"></div>
+              <div class="skeleton skeleton--btn"></div>
+            </div>
+          </div>
+          <div class="product-card product-card--skeleton">
+            <div class="product-card__image-container">
+              <div class="skeleton skeleton--image"></div>
+            </div>
+            <div class="product-card__info">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text skeleton--text-short"></div>
+              <div class="skeleton skeleton--btn"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Todos los Productos -->
+    <section class="section section--border" aria-labelledby="all-products-title">
+      <div class="container">
+        <h2 id="all-products-title" class="section__title">Todos los Productos</h2>
+        <div class="products-grid" id="all-products">
+          <!-- Se carga dinámicamente desde JS -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__content">
+        <div class="footer__section">
+          <h3>Mi Tienda Online</h3>
+          <p>Tu tienda de confianza para productos de comida y aseo personal.</p>
+          <div class="footer__social">
+            <a href="#" aria-label="Facebook">📘</a>
+            <a href="#" aria-label="Instagram">📷</a>
+            <a href="#" aria-label="WhatsApp">💬</a>
+          </div>
+        </div>
+        
+        <div class="footer__section">
+          <h3>Enlaces Rápidos</h3>
+          <a href="/">Inicio</a>
+          <a href="/#categorias">Categorías</a>
+          <a href="/contacto.html">Contacto</a>
+          <a href="/admin/login.html">Admin</a>
+        </div>
+        
+        <div class="footer__section">
+          <h3>Contacto</h3>
+          <p>📞 +123 456 7890</p>
+          <p>✉️ contacto@mitienda.com</p>
+          <p>📍 Calle Principal 123, Ciudad</p>
+        </div>
+      </div>
+      
+      <div class="footer__bottom">
+        <p>&copy; 2024 Mi Tienda Online. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Navegación Móvil Inferior -->
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil">
+    <a href="/" class="mobile-nav__item active">
+      <span class="mobile-nav__icon">🏠</span>
+      <span>Inicio</span>
+    </a>
+    <a href="/#categorias" class="mobile-nav__item">
+      <span class="mobile-nav__icon">📂</span>
+      <span>Categorías</span>
+    </a>
+    <a href="/carrito.html" class="mobile-nav__item">
+      <span class="mobile-nav__icon">🛒</span>
+      <span>Carrito</span>
+    </a>
+    <a href="/contacto.html" class="mobile-nav__item">
+      <span class="mobile-nav__icon">📞</span>
+      <span>Contacto</span>
+    </a>
+  </nav>
+
+  <!-- Overlay para menú móvil -->
+  <div class="nav-overlay"></div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { initMobileMenu, showToast } from './js/ui.js';
+    import { getCategories, initCategoryFilters } from './js/categorias.js';
+    import { getProducts, renderProductsGrid, showProductSkeletons } from './js/productos.js';
+    import { getCartCount, addToCart } from './js/carrito.js';
+    import { formatPrice } from './js/utils.js';
+
+    // Inicializar menú móvil
+    initMobileMenu();
+    
+    // Inicializar contador del carrito
+    function updateCartCounter() {
+      const count = getCartCount();
+      const counterElement = document.querySelector('.cart-count');
+      if (counterElement) {
+        counterElement.textContent = count;
+        counterElement.style.display = count > 0 ? 'flex' : 'none';
+      }
+    }
+    updateCartCounter();
+    window.addEventListener('cart-updated', updateCartCounter);
+    
+    // Función global para añadir al carrito y mostrar notificación
+    window.addToCartAndNotify = async (productId) => {
+      try {
+        const product = await fetch(`/api/producto/${productId}`).then(r => r.json());
+        if (addToCart(product)) {
+          showToast(`"${product.nombre}" añadido al carrito`, 'success');
+        }
+      } catch (error) {
+        showToast('Error al añadir producto', 'error');
+      }
+    };
+    
+    // Cargar categorías
+    async function loadCategories() {
+      const categories = await getCategories();
+      
+      // Renderizar filtros
+      const filtersContainer = document.querySelector('.category-filters');
+      if (filtersContainer) {
+        let html = `<button class="category-btn category-btn--active" data-category-id="">Todos</button>`;
+        html += categories.map(cat => `
+          <button class="category-btn" data-category-id="${cat.id}" data-category-slug="${cat.slug}">
+            ${cat.nombre}
+          </button>
+        `).join('');
+        filtersContainer.innerHTML = html;
+        
+        // Listeners para filtros
+        filtersContainer.addEventListener('click', async (e) => {
+          const btn = e.target.closest('.category-btn');
+          if (!btn) return;
+          
+          // Actualizar activo
+          filtersContainer.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
+          btn.classList.add('category-btn--active');
+          
+          // Filtrar productos
+          const categoryId = btn.dataset.categoryId;
+          await loadAllProducts(categoryId || null);
+        });
+      }
+    }
+    
+    // Cargar productos destacados
+    async function loadFeaturedProducts() {
+      showProductSkeletons('#featured-products', 3);
+      const { data: products } = await getProducts({ destacados: true, limit: 6 });
+      renderProductsGrid(products, '#featured-products');
+    }
+    
+    // Cargar todos los productos
+    async function loadAllProducts(categoriaId = null) {
+      showProductSkeletons('#all-products', 6);
+      const { data: products } = await getProducts({ categoriaId, limit: 12 });
+      renderProductsGrid(products, '#all-products');
+    }
+    
+    // Inicializar página
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCategories();
+      loadFeaturedProducts();
+      loadAllProducts();
+    });
+  </script>
+</body>
+</html>
