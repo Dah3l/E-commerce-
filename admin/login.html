@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Admin - Mi Tienda</title>
+  
+  <!-- Estilos -->
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-login-page">
+  <div class="admin-login-card">
+    <div class="admin-login__header">
+      <h1 class="admin-login__logo">🔐 Panel Admin</h1>
+      <p class="admin-login__subtitle">Ingresa tu contraseña para acceder</p>
+    </div>
+    
+    <div id="loginError" class="admin-login__error" style="display: none;"></div>
+    <div id="loginBlocked" class="admin-login__blocked" style="display: none;">
+      ⚠️ Demasiados intentos fallidos. Intente en unos minutos.
+    </div>
+    
+    <form class="admin-login__form" id="loginForm">
+      <div class="form-group">
+        <label for="password" class="form-label">Contraseña</label>
+        <input 
+          type="password" 
+          id="password" 
+          class="form-input" 
+          required
+          autocomplete="current-password"
+          placeholder="Ingrese su contraseña"
+        >
+      </div>
+      
+      <button type="submit" class="btn btn--primary admin-login__submit" id="loginBtn">
+        Iniciar Sesión
+      </button>
+    </form>
+    
+    <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6B7280;">
+      <a href="/" style="color: var(--color-primary);">← Volver a la tienda</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { login, isLoginBlocked } from '../js/auth.js';
+    import { showToast } from '../js/ui.js';
+    import { getRedirectUrl } from '../js/admin/admin-auth.js';
+
+    const form = document.getElementById('loginForm');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorDiv = document.getElementById('loginError');
+    const blockedDiv = document.getElementById('loginBlocked');
+
+    // Verificar si está bloqueado al cargar
+    if (isLoginBlocked()) {
+      blockedDiv.style.display = 'block';
+      passwordInput.disabled = true;
+      loginBtn.disabled = true;
+    }
+
+    // Manejar submit del formulario
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = passwordInput.value.trim();
+      
+      if (!password) {
+        showError('Ingrese una contraseña');
+        return;
+      }
+      
+      // Deshabilitar botón durante login
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Verificando...';
+      errorDiv.style.display = 'none';
+      
+      try {
+        const result = await login(password);
+        
+        if (result.success) {
+          showToast('¡Bienvenido!', 'success');
+          
+          // Redirigir al dashboard o página original
+          const redirectUrl = sessionStorage.getItem('admin_redirect_url') || '/admin/dashboard.html';
+          sessionStorage.removeItem('admin_redirect_url');
+          window.location.href = redirectUrl;
+        } else {
+          showError(result.error || 'Contraseña incorrecta');
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Iniciar Sesión';
+          
+          // Limpiar campo
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      } catch (error) {
+        console.error('Error en login:', error);
+        showError('Error de conexión. Intente nuevamente.');
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Iniciar Sesión';
+      }
+    });
+
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      
+      // Ocultar automáticamente después de 5 segundos
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

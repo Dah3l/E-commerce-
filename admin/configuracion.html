@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración - Panel Admin</title>
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-sidebar__header"><a href="/admin/dashboard.html" class="admin-sidebar__logo">🛒 Admin Panel</a></div>
+      <nav class="admin-sidebar__nav">
+        <ul class="admin-nav__list">
+          <li class="admin-nav__item"><a href="/admin/dashboard.html" class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+          <li class="admin-nav__item"><a href="/admin/productos.html" class="admin-nav__link"><span class="admin-nav__icon">📦</span>Productos</a></li>
+          <li class="admin-nav__item"><a href="/admin/categorias.html" class="admin-nav__link"><span class="admin-nav__icon">📂</span>Categorías</a></li>
+          <li class="admin-nav__item"><a href="/admin/configuracion.html" class="admin-nav__link active"><span class="admin-nav__icon">⚙️</span>Configuración</a></li>
+          <li class="admin-nav__item" style="margin-top: 20px;"><a href="/" class="admin-nav__link" target="_blank"><span class="admin-nav__icon">🏪</span>Ver Tienda</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <header class="admin-header">
+        <button class="admin-sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        <h1 class="admin-header__title">Configuración</h1>
+        <div class="admin-header__actions"><button class="btn btn--secondary logout-btn" onclick="logout()">🚪 Salir</button></div>
+      </header>
+      <div class="container" style="padding: var(--spacing-6);">
+        <div class="admin-form">
+          <div class="admin-form__header"><h2 class="admin-form__title">Datos del Negocio</h2></div>
+          <form id="configForm">
+            <div class="form-group"><label class="form-label">Nombre del Negocio</label><input type="text" class="form-input" id="nombre_negocio"></div>
+            <div class="form-group"><label class="form-label">Descripción</label><textarea class="form-textarea" id="descripcion"></textarea></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-4);">
+              <div class="form-group"><label class="form-label">Teléfono</label><input type="text" class="form-input" id="telefono"></div>
+              <div class="form-group"><label class="form-label">WhatsApp</label><input type="text" class="form-input" id="whatsapp"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="email"></div>
+            <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-input" id="direccion"></div>
+            <div class="form-group"><label class="form-label">Horario</label><input type="text" class="form-input" id="horario"></div>
+            <div class="form-group"><label class="form-label">Moneda</label><input type="text" class="form-input" id="moneda" placeholder="USD"></div>
+            <button type="submit" class="btn btn--primary">Guardar Configuración</button>
+          </form>
+        </div>
+
+        <div class="admin-form" style="margin-top: var(--spacing-6);">
+          <div class="admin-form__header"><h2 class="admin-form__title">Cambiar Contraseña</h2></div>
+          <form id="passwordForm">
+            <div class="form-group"><label class="form-label form-label--required">Contraseña Actual</label><input type="password" class="form-input" id="currentPassword" required></div>
+            <div class="form-group"><label class="form-label form-label--required">Nueva Contraseña</label><input type="password" class="form-input" id="newPassword" required minlength="6"></div>
+            <div class="form-group"><label class="form-label form-label--required">Confirmar Nueva Contraseña</label><input type="password" class="form-input" id="confirmPassword" required></div>
+            <button type="submit" class="btn btn--danger">Cambiar Contraseña</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { isAuthenticated, changePassword } from '../js/auth.js';
+    import { supabase } from '../js/supabase-client.js';
+    import { showToast } from '../js/ui.js';
+
+    if (!isAuthenticated()) window.location.href = '/admin/login.html';
+    window.toggleSidebar = () => document.getElementById('adminSidebar').classList.toggle('admin-sidebar--open');
+    window.logout = () => { sessionStorage.removeItem('admin_session'); window.location.href = '/admin/login.html'; };
+
+    async function loadConfig() {
+      const { data } = await supabase.from('config_negocio').select('*').eq('id', 1).single();
+      if (data) {
+        document.getElementById('nombre_negocio').value = data.nombre_negocio || '';
+        document.getElementById('descripcion').value = data.descripcion || '';
+        document.getElementById('telefono').value = data.telefono || '';
+        document.getElementById('whatsapp').value = data.whatsapp || '';
+        document.getElementById('email').value = data.email || '';
+        document.getElementById('direccion').value = data.direccion || '';
+        document.getElementById('horario').value = data.horario || '';
+        document.getElementById('moneda').value = data.moneda || 'USD';
+      }
+    }
+
+    document.getElementById('configForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        nombre_negocio: document.getElementById('nombre_negocio').value,
+        descripcion: document.getElementById('descripcion').value,
+        telefono: document.getElementById('telefono').value,
+        whatsapp: document.getElementById('whatsapp').value,
+        email: document.getElementById('email').value,
+        direccion: document.getElementById('direccion').value,
+        horario: document.getElementById('horario').value,
+        moneda: document.getElementById('moneda').value,
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await supabase.from('config_negocio').upsert({ id: 1, ...data });
+      if (error) showToast('Error guardando configuración', 'error');
+      else showToast('Configuración guardada', 'success');
+    });
+
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const current = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      if (newPassword !== confirm) { showToast('Las contraseñas no coinciden', 'error'); return; }
+      if (newPassword.length < 6) { showToast('La contraseña debe tener al menos 6 caracteres', 'error'); return; }
+      const result = await changePassword(current, newPassword);
+      if (result.success) { showToast('Contraseña cambiada. Inicie sesión nuevamente.', 'success'); setTimeout(() => logout(), 2000); }
+      else showToast(result.error, 'error');
+    });
+
+    document.addEventListener('DOMContentLoaded', loadConfig);
+  </script>
+</body>
+</html>

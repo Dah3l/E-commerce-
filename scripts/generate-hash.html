@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Hash para Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #6B8E23 0%, #20B2AA 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      max-width: 500px;
+      width: 100%;
+    }
+    h1 {
+      color: #1F2937;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+    .subtitle {
+      color: #6B7280;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #374151;
+      font-weight: 500;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #6B8E23;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #6B8E23;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #556B2F;
+    }
+    button:disabled {
+      background: #9CA3AF;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #F3F4F6;
+      border-radius: 8px;
+      display: none;
+    }
+    .result.show {
+      display: block;
+    }
+    .result h3 {
+      color: #1F2937;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    .result-item {
+      margin-bottom: 15px;
+    }
+    .result-item label {
+      font-size: 12px;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .result-value {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      word-break: break-all;
+      margin-top: 5px;
+      border: 1px solid #E5E7EB;
+    }
+    .copy-btn {
+      background: #20B2AA;
+      padding: 6px 12px;
+      font-size: 12px;
+      margin-top: 5px;
+      width: auto;
+    }
+    .copy-btn:hover {
+      background: #008B8B;
+    }
+    .sql-box {
+      background: #1F2937;
+      color: #10B981;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-top: 15px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .alert {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .alert-info {
+      background: #DBEAFE;
+      color: #1E40AF;
+      border-left: 4px solid #3B82F6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔐 Generador de Hash Admin</h1>
+    <p class="subtitle">Genera el hash SHA-256 + salt para la contraseña de administrador</p>
+    
+    <div class="alert alert-info">
+      <strong>Instrucciones:</strong> Ingresa la contraseña que deseas usar para el login del panel admin. 
+      Copia el hash y salt resultantes y ejecuta el SQL en Supabase.
+    </div>
+    
+    <form id="hashForm">
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" required minlength="6" placeholder="Mínimo 6 caracteres">
+      </div>
+      
+      <div class="form-group">
+        <label for="confirmPassword">Confirmar Contraseña</label>
+        <input type="password" id="confirmPassword" required placeholder="Repite la contraseña">
+      </div>
+      
+      <button type="submit" id="generateBtn">Generar Hash</button>
+    </form>
+    
+    <div class="result" id="result">
+      <h3>✅ Hash Generado Exitosamente</h3>
+      
+      <div class="result-item">
+        <label>Hash (password_hash)</label>
+        <div class="result-value" id="hashValue"></div>
+        <button class="copy-btn" onclick="copyToClipboard('hashValue')">📋 Copiar Hash</button>
+      </div>
+      
+      <div class="result-item">
+        <label>Salt</label>
+        <div class="result-value" id="saltValue"></div>
+        <button class="copy-btn" onclick="copyToClipboard('saltValue')">📋 Copiar Salt</button>
+      </div>
+      
+      <div class="result-item">
+        <label>SQL para Supabase:</label>
+        <div class="sql-box" id="sqlQuery"></div>
+        <button class="copy-btn" onclick="copyToClipboard('sqlQuery')">📋 Copiar SQL</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Generar hash SHA-256
+    async function sha256(text) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Generar salt aleatorio
+    function generateSalt() {
+      const array = new Uint8Array(16);
+      crypto.getRandomValues(array);
+      return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Copiar al portapapeles
+    function copyToClipboard(elementId) {
+      const element = document.getElementById(elementId);
+      const text = element.textContent || element.innerText;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('¡Copiado al portapapeles!');
+      }).catch(err => {
+        console.error('Error copiando:', err);
+      });
+    }
+
+    // Mostrar toast
+    function showToast(message) {
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #10B981;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999;
+        animation: slideIn 0.3s ease;
+      `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    // Añadir animaciones CSS
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Manejar formulario
+    document.getElementById('hashForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      
+      if (password !== confirmPassword) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+      
+      if (password.length < 6) {
+        alert('La contraseña debe tener al menos 6 caracteres');
+        return;
+      }
+      
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generando...';
+      
+      try {
+        // Generar salt
+        const salt = generateSalt();
+        
+        // Calcular hash: SHA-256(password + salt)
+        const hash = await sha256(password + salt);
+        
+        // Mostrar resultados
+        document.getElementById('hashValue').textContent = hash;
+        document.getElementById('saltValue').textContent = salt;
+        
+        // Generar SQL
+        const sql = `INSERT INTO config_admin (id, password_hash, salt) 
+VALUES (1, '${hash}', '${salt}')
+ON CONFLICT (id) DO UPDATE SET 
+  password_hash = '${hash}',
+  salt = '${salt}',
+  updated_at = NOW();`;
+        
+        document.getElementById('sqlQuery').textContent = sql;
+        document.getElementById('result').classList.add('show');
+        
+        showToast('¡Hash generado exitosamente!');
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error generando hash: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generar Hash';
+      }
+    });
+  </script>
+</body>
+</html>
