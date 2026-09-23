@@ -1,7 +1,7 @@
 import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGrid, setCurrency } from '../productos.js';
 import { addToCart, getCart } from '../carrito.js';
 import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
-import { formatPrice, formatPriceBoth, getUrlParam, formatPlainText } from '../utils.js';
+import { formatPrice, getUrlParam, formatPlainText } from '../utils.js';
 import { getBizConfig, getWhatsAppNumber } from '../config-negocio.js';
 import { getPreferredCurrency, setCupRate } from '../utils.js';
 
@@ -211,14 +211,11 @@ if (!phone) {
 showToast('El número de WhatsApp no está configurado', 'error');
 return;
 }
-// El mensaje SIEMPRE incluye ambas monedas (USD + conversión a CUP)
-const total = formatPriceBoth((product.precio_oferta || product.precio) * qty());
-const rate = parseFloat(String(bizConfig.tasa_cup ?? '').replace(',', '.'));
+const total = formatPrice((product.precio_oferta || product.precio) * qty(), currency);
 const msg = [
 `¡Hola${bizConfig.nombre_negocio ? ' ' + bizConfig.nombre_negocio : ''}! 👋`,
 `Quiero comprar: *${qty()} x ${product.nombre}*`,
 `Total: ${total}`,
-...(Number.isFinite(rate) && rate > 0 ? [`(Tasa de cambio: 1 USD = ${rate} CUP)`] : []),
 '',
 `${window.location.origin}${window.location.pathname.replace('[^/]*$','')}producto.html?id=${product.id}`
 ].join('\n');

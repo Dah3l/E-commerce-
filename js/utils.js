@@ -112,20 +112,6 @@ export function formatPrice(amount, currency = DEFAULT_CURRENCY) {
 }
 
 /**
- * Formatea un precio base (USD) mostrando AMBAS monedas, p. ej.:
- *   "$2.99 USD (~2,093 CUP)"  — con tasa configurada
- *   "$2.99 USD"               — sin tasa (se omite la conversión)
- * Útil para mensajes de WhatsApp donde el negocio necesita ver ambos valores.
- * @param {number} amountUSD - Cantidad en moneda base (USD)
- * @returns {string}
- */
-export function formatPriceBoth(amountUSD) {
-  const usd = formatPrice(amountUSD, DEFAULT_CURRENCY);
-  if (!isCupAvailable()) return usd;
-  return `${usd} (~${formatPrice(amountUSD, ALT_CURRENCY)})`;
-}
-
-/**
  * Convierte un texto a slug URL-friendly
  * @param {string} text - Texto original
  * @returns {string} Slug lowercase sin caracteres especiales
