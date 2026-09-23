@@ -142,15 +142,23 @@
         categorias.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
     }
 
-    // Estado de compatibilidad: si la BD aun no tiene la columna "codigo"
-    // (no se ejecuto la migracion SQL), las consultas que la referencian
-    // fallan. Lo detectamos una vez y a partir de ahi consultamos sin "codigo"
-    // para que la lista de productos SIEMPRE se muestre.
-    let bdSinColumnaCodigo = false;
+    // Estado de compatibilidad con la BD: si la columna "codigo" no existe
+    // (migracion no ejecutada) o el schema cache no resuelve el embed de
+    // "categorias", las consultas fallan y la tabla quedaba vacia. Probamos
+    // variantes de select() en orden de riqueza hasta encontrar una que
+    // funcione; a partir de ahi recordamos la variante buena para toda la
+    // sesion. Ultima variante: '*' sin embed, que siempre funciona.
+    let columnaSelect = 'conCodigo';
+    const SELECT_VARIANTES = ['conCodigo', 'noCodigo', 'conCodigoSinEmbed', 'noCodigoSinEmbed'];
 
-    function esErrorColumnaCodigo(error) {
+    function esErrorSchemaODesconocido(error) {
       const msg = String(error?.message || '');
-      return /codigo/i.test(msg) && /column|does not exist|schema cache|42703|PGRST202/i.test(msg);
+      return /column|does not exist|schema cache|could not find|PGRST\d+|relation .* does not exist/i.test(msg);
+    }
+
+    function currentSelectExpr() {
+      if (columnaSelect === 'ultimoRecurso') return '*';
+      return PRODUCT_SELECT_COLUMNS[columnaSelect];
     }
 
     async function loadProductos() {
@@ -158,21 +166,32 @@
       const runQuery = () => {
         let q = supabase
           .from('productos')
-          .select(bdSinColumnaCodigo ? PRODUCT_SELECT_COLUMNS.noCodigo : PRODUCT_SELECT_COLUMNS.conCodigo)
+          .select(currentSelectExpr())
           .order('created_at', { ascending: false });
         if (filtroCat) q = q.eq('categoria_id', filtroCat);
         return q;
       };
       let { data, error } = await runQuery();
-      if (error && !bdSinColumnaCodigo && esErrorColumnaCodigo(error)) {
-        console.warn('La columna "codigo" no existe en la BD todavia. Ejecuta la migracion SQL (ver supabase-schema.sql). Cargando sin codigo...');
-        bdSinColumnaCodigo = true;
-        ({ data, error } = await runQuery());
-      }
       if (error) {
-        console.error('Error cargando productos:', error);
-        showToast('No se pudieron cargar los productos: ' + (error.message || 'error desconocido'), 'error', 6000);
-        return;
+        console.warn('Error en la consulta de productos, probando variantes compatibles:', error.message);
+        // Probar la siguiente variante (sin codigo -> sin embed -> '*' pelado)
+        const idx = SELECT_VARIANTES.indexOf(columnaSelect);
+        for (let i = (idx === -1 ? 0 : idx + 1); i < SELECT_VARIANTES.length; i++) {
+          columnaSelect = SELECT_VARIANTES[i];
+          ({ data, error } = await runQuery());
+          if (!error) break;
+        }
+        if (error) {
+          // ultimo recurso: '*' sin embed ni columnas explicitas
+          columnaSelect = 'ultimoRecurso';
+          ({ data, error } = await runQuery());
+        }
+        if (error) {
+          console.error('Error cargando productos:', error);
+          showToast('No se pudieron cargar los productos: ' + (error.message || 'error desconocido'), 'error', 6000);
+          return;
+        }
+        showToast('Compatibilidad BD: cargando productos sin alguna columna/embed (ejecuta las migraciones SQL).', 'info', 5000);
       }
       productos = (data || []).map(normalizeProduct);
       renderProductos();
@@ -342,9 +361,9 @@
         let { error } = await supabase.from('productos').update(data).eq('id', existing.id);
         // Reintento de compatibilidad: si la columna "codigo" aún no existe en la BD,
         // guardar sin ella para que el admin no falle hasta ejecutar la migración SQL.
-        if (error && esErrorColumnaCodigo(error)) {
+        if (error && esErrorSchemaODesconocido(error) && 'codigo' in data) {
           delete data.codigo;
-          bdSinColumnaCodigo = true;
+          if (columnaSelect === 'conCodigo') columnaSelect = 'noCodigo';
           ({ error } = await supabase.from('productos').update(data).eq('id', existing.id));
         }
         if (error) {
@@ -353,9 +372,9 @@
         }
       } else {
         let { error } = await supabase.from('productos').insert([data]);
-        if (error && esErrorColumnaCodigo(error)) {
+        if (error && esErrorSchemaODesconocido(error) && 'codigo' in data) {
           delete data.codigo;
-          bdSinColumnaCodigo = true;
+          if (columnaSelect === 'conCodigo') columnaSelect = 'noCodigo';
           ({ error } = await supabase.from('productos').insert([data]));
         }
         if (error) {

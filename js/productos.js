@@ -20,13 +20,25 @@ export function setCurrency(currency) {
  * pero un fallo de schema cache sobre "codigo" debe detectarse y reintento
  * usando la variante "noCodigo".
  */
+// Las variantes "sinEmbed" evitan la relacion embebida `categorias(nombre)`:
+// si el schema cache de PostgREST esta desactualizado o la FK no existe, ese
+// embed provoca errores PGRST100/204 que dejaban la tabla del admin vacia.
+// Como ultimo recurso se usa '*' sin embed (siempre funciona; el nombre de la
+// categoria simplemente no estara disponible hasta arreglar el schema).
 export const PRODUCT_SELECT_COLUMNS = {
   conCodigo: 'id, codigo, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at, categorias(nombre)',
-  noCodigo: 'id, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at, categorias(nombre)'
+  noCodigo: 'id, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at, categorias(nombre)',
+  conCodigoSinEmbed: 'id, codigo, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at',
+  noCodigoSinEmbed: 'id, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at'
 };
 
 /**
  * Detecta errores de Postgres/PostgREST por columna inexistente.
+ * OJO: PostgREST no siempre incluye el nombre de la columna en el mensaje;
+ * p.ej. "Could not find the categorias.nombre column in the schema cache"
+ * no menciona "codigo". Por eso se asume que si estabamos usando una query
+ * que referencia la columna y falla con un error de schema/columna, es ese
+ * el problema (fallback seguro: simplemente se reintenta sin "codigo").
  * @param {Object|string} errorOrMessage
  * @param {string} columnName
  */
@@ -34,8 +46,8 @@ export function isMissingColumnError(errorOrMessage, columnName = 'codigo') {
   const msg = String(
     typeof errorOrMessage === 'string' ? errorOrMessage : (errorOrMessage?.message || '')
   );
-  return new RegExp(columnName, 'i').test(msg) &&
-    /column .*does not exist|does not exist|schema cache|42703|PGRST202/i.test(msg);
+  // Error de schema/columna inexistente (con o sin nombre de columna explicito)
+  return /column .*does not exist|does not exist|schema cache|could not find|42703|PGRST202|PGRST100/i.test(msg);
 }
 
 /**
@@ -229,9 +241,11 @@ export async function getProducts(filtersParam = {}) {
       const nameOnlyClause = clean
         ? clean.split(/\s+/).filter(Boolean).map(term => `nombre.ilike."*${term}*"`).join(',')
         : null;
+      // Se reintenta en cascada: sin codigo -> ademas sin embed de categorias.
+      let selectExpr = PRODUCT_SELECT_COLUMNS.noCodigo;
       const base = () => supabase
         .from('productos')
-        .select(`\n          *,\n          categorias ( id, nombre, slug )\n        `, { count: 'exact' })
+        .select(selectExpr, { count: 'exact' })
         .eq('activo', true);
       let q2 = base();
       if (filters.categoriaId) q2 = q2.eq('categoria_id', filters.categoriaId);
@@ -250,7 +264,23 @@ export async function getProducts(filtersParam = {}) {
       } else if (filters.limit) {
         q2 = q2.limit(filters.limit);
       }
-      const r = await q2;
+      let r = await q2;
+      if (r.error && isMissingColumnError(r.error)) {
+        // Tampoco se resuelve el embed de categorias (schema cache): ultima variante
+        selectExpr = PRODUCT_SELECT_COLUMNS.noCodigoSinEmbed;
+        q2 = base();
+        if (filters.categoriaId) q2 = q2.eq('categoria_id', filters.categoriaId);
+        if (filters.destacados) q2 = q2.eq('destacado', true);
+        if (filters.enOferta) q2 = q2.gt('precio_oferta', 0);
+        if (nameOnlyClause) q2 = q2.or(nameOnlyClause);
+        q2 = q2.order('created_at', { ascending: false });
+        if (filters.offset != null) {
+          q2 = q2.range(filters.offset, filters.offset + ((filters.limit ?? 24) - 1));
+        } else if (filters.limit) {
+          q2 = q2.limit(filters.limit);
+        }
+        r = await q2;
+      }
       data = r.data; error = r.error; count = r.count;
       // Evitar el recorrido de paginas extra (que volveria a usar el filtro roto)
       filters = { ...filters, limit: filters.limit ?? 1000 };
