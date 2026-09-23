@@ -207,7 +207,9 @@
 .admin-table td {
   padding: var(--spacing-3) var(--spacing-4);
   text-align: left;
-  border-bottom: 1px solid var(--color-gray-200);
+  vertical-align: middle;
+  /* Separador sutil entre filas: línea fina gris claro, sin bordes dobles */
+  border-bottom: 1px solid var(--color-gray-100, #F3F4F6);
 }
 
 .admin-table th {
@@ -232,12 +234,67 @@
   gap: var(--spacing-2);
 }
 
+/* Filas alternas MUY suaves (casi imperceptibles) para que los separadores
+   no se vean cortados ni desalineados entre iconos y descripciones */
 .admin-table tbody tr:nth-child(even) {
-  background-color: var(--color-gray-50);
+  background-color: #FAFBFC;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .admin-table tbody tr:hover {
   background-color: #EEF2FF;
+}
+
+/* Imagen de producto alineada y sin deformarse */
+.admin-table .cell-img img {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-gray-200);
+  background-color: var(--color-gray-100);
+}
+
+/* Nombre + descripcion en dos lineas ordenadas dentro de la celda */
+.admin-table .cell-product {
+  max-width: 280px;
+}
+.admin-table .cell-product__name {
+  font-weight: 600;
+  color: var(--color-gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+.admin-table .cell-product__desc {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+/* Acciones: botones compactos de solo icono (el texto esta en title/aria-label) */
+.admin-table__actions {
+  white-space: nowrap;
+}
+.admin-table__btn {
+  padding: var(--spacing-1) var(--spacing-2);
+}
+.admin-table__btn-text {
+  display: none;
+}
+@media (min-width: 1200px) {
+  .admin-table__btn-text {
+    display: inline;
+  }
 }
 
 .admin-table td {

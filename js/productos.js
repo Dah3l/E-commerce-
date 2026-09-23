@@ -155,10 +155,20 @@ export async function getProducts(filters = {}) {
   }
   
   if (filters.busqueda) {
-    // Formato PostgREST: ilike.*termino* (los % literales rompen el parser de or())
-    const searchTerms = filters.busqueda.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-    const conditions = searchTerms.map(term => `nombre.ilike.*${term}*`);
-    query = query.or(conditions.join(','));
+    // Sanear: quitar caracteres que rompen el parser de filtros de PostgREST
+    // (comas, paréntesis, %, y comillas dobles) y buscar por cada palabra.
+    const clean = String(filters.busqueda)
+      .replace(/[(),"%\\]/g, ' ')
+      .replace(/[^\p{L}\p{N}\s._-]/gu, '')
+      .toLowerCase()
+      .trim();
+    if (clean) {
+      const searchTerms = clean.split(/\s+/).filter(t => t.length > 0);
+      // Entre comillas dobles para que los * se interpreten como comodín
+      // y no colapsen con caracteres especiales del parser.
+      const conditions = searchTerms.map(term => `nombre.ilike."*${term}*"`);
+      query = query.or(conditions.join(','));
+    }
   }
   
   // Ordenar: destacados primero, luego por creación

@@ -35,7 +35,14 @@
   color: var(--color-primary-dark);
 }
 
-/* Botón hamburguesa para móvil */
+/* Botón hamburguesa: SOLO en desktop (abre un pequeño desplegable).
+   En móvil/tablet se oculta: allí la barra inferior cumple la navegación. */
+@media (max-width: 1023.98px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+}
+
 .hamburger-btn {
   display: flex;
   flex-direction: column;
@@ -203,7 +210,7 @@
 .site-footer {
   background-color: var(--color-gray-900);
   color: var(--color-gray-300);
-  padding: var(--spacing-12) 0 var(--spacing-8);
+  padding: var(--spacing-6) 0;
   margin-top: auto;
 }
 
@@ -476,4 +483,158 @@
 .products-grid--scroll > * {
   flex: 0 0 240px;
   scroll-snap-align: start;
+}
+
+/* ============================================
+   BOTÓN FLOTANTE "VOLVER ARRIBA"
+   ============================================ */
+.scroll-top-btn {
+  position: fixed;
+  right: var(--spacing-4, 16px);
+  bottom: calc(var(--spacing-4, 16px) + env(safe-area-inset-bottom, 0px));
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full, 9999px);
+  border: none;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  font-size: var(--font-size-xl, 20px);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  z-index: calc(var(--z-fixed) + 1);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity var(--transition-base), transform var(--transition-base), visibility var(--transition-base), background-color var(--transition-fast);
+}
+
+.scroll-top-btn--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scroll-top-btn:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* En pantallas pequeñas con la barra de navegación abierta, sube el botón para no taparla */
+@media (max-width: 767.98px) {
+  .mobile-nav--open ~ .scroll-top-btn,
+  body:has(.mobile-nav--open) .scroll-top-btn {
+    bottom: 90px;
+  }
+}
+
+/* ============================================
+   MENÚ MÓVIL EN DESKTOP: desplegable bajo la hamburguesa
+   ============================================ */
+@media (min-width: 1024px) {
+  .site-header {
+    position: relative;
+  }
+  .hamburger-btn {
+    display: flex;
+    order: 3; /* a la derecha del icono del carrito */
+  }
+  .header__cart {
+    order: 2;
+  }
+  .mobile-nav {
+    top: calc(100% + 6px);
+    bottom: auto;
+    left: auto;
+    right: var(--spacing-4, 16px);
+    width: 230px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: var(--spacing-1);
+    padding: var(--spacing-2);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+    transform: translateY(-8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform var(--transition-base), opacity var(--transition-base), visibility var(--transition-base);
+  }
+  .mobile-nav--open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+  .mobile-nav__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3);
+    border-radius: var(--radius-md, 8px);
+    font-size: var(--font-size-sm);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+  }
+  .mobile-nav__item:hover {
+    background-color: var(--color-gray-100);
+  }
+  .mobile-nav__icon {
+    font-size: var(--font-size-lg);
+  }
+}
+
+/* ============================================
+   FOOTER SIMPLE (una linea)
+   ============================================ */
+.site-footer--simple {
+  padding: var(--spacing-4, 16px) 0;
+}
+
+.footer-simple {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4, 16px);
+  flex-wrap: wrap;
+}
+
+.footer-simple__brand {
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.footer-simple__links {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-5, 20px);
+}
+
+.footer-simple__links a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footer-simple__links a:hover {
+  color: var(--color-white);
+}
+
+.footer-simple__copy {
+  opacity: 0.7;
+  font-size: var(--font-size-sm, 13px);
+}
+
+@media (max-width: 599.98px) {
+  .footer-simple {
+    justify-content: center;
+    text-align: center;
+  }
 }

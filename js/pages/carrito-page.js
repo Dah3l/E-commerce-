@@ -1,10 +1,11 @@
     import { getCartItems, addToCart, removeFromCart, updateQuantity, getCartSubtotal, clearCart } from '../js/carrito.js';
     import { formatPrice, escapeHtml } from '../js/utils.js';
-    import { showToast, renderSiteHeader, renderSiteFooter } from '../js/ui.js';
+    import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../js/ui.js';
     import { getBizConfig, getWhatsAppNumber, getCurrency } from '../js/config-negocio.js';
     import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from '../js/productos.js';
 
     renderSiteHeader('carrito');
+    initScrollTopButton();
     let currency = 'USD';
     let suggestProducts = [];
     const container = document.getElementById('cartContent');
@@ -63,7 +64,8 @@
       if (inc) {
         const item = getCartItems().find(i => String(i.producto_id) === inc.dataset.inc);
         if (item) {
-          addToCart({ id: item.producto_id, nombre: item.nombre, precio: item.precio, imagen_url: item.imagen_url }, 1);
+          const current = parseInt(item.cantidad, 10) || 1;
+          updateQuantity(item.producto_id, current + 1);
           renderCart();
           updateCounter();
         }
@@ -147,7 +149,22 @@
       }
     });
 
-    window.addEventListener('cart-updated', () => { renderCart(); updateCounter(); });
+    // El render se dispara SOLO cuando cambia el storage (una vez), no por cada
+    // addToCart/updateQuantity interno, para evitar renders dobles/parpadeo.
+    let lastCartJson = localStorage.getItem('shopping_cart') || '[]';
+    window.addEventListener('storage', (e) => {
+      if (e.key !== 'shopping_cart') return;
+      lastCartJson = e.newValue || '[]';
+      renderCart();
+      updateCounter();
+    });
+    window.addEventListener('cart-updated', () => {
+      const nowJson = localStorage.getItem('shopping_cart') || '[]';
+      if (nowJson === lastCartJson) return; // ya renderizado o sin cambios reales
+      lastCartJson = nowJson;
+      renderCart();
+      updateCounter();
+    });
 
     async function loadSuggestions() {
       try {

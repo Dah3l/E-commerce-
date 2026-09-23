@@ -127,12 +127,17 @@
         return;
       }
 
-      tbody.innerHTML = filtered.map(p => `
+      tbody.innerHTML = filtered.map(p => {
+        const desc = (p.descripcion || '').replace(/\s+/g, ' ').trim();
+        return `
         <tr>
-          <td><img src="${escapeHtml(imageUrl(p))}" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.src='/assets/icons/placeholder.svg'"></td>
-          <td>${escapeHtml(p.nombre)}</td>
+          <td class="cell-img"><img src="${escapeHtml(imageUrl(p))}" alt="" loading="lazy" onerror="this.src='/assets/icons/placeholder.svg'"></td>
+          <td class="cell-product">
+            <div class="cell-product__name">${escapeHtml(p.nombre)}</div>
+            ${desc ? `<div class="cell-product__desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>` : ''}
+          </td>
           <td>${escapeHtml(p.categorias?.nombre || '-')}</td>
-          <td class="admin-price">$${Number(p.precio).toFixed(2)}${p.precio_oferta ? `<del>$${Number(p.precio_oferta).toFixed(2)}</del>` : ''}</td>
+          <td class="admin-price">${p.precio_oferta ? `<del>$${Number(p.precio).toFixed(2)}</del>$${Number(p.precio_oferta).toFixed(2)}` : `$${Number(p.precio).toFixed(2)}`}</td>
           <td><span class="badge ${p.stock === 0 ? 'badge--danger' : p.stock < 10 ? 'badge--warning' : 'badge--success'}">${p.stock ?? '-'}</span></td>
           <td><span class="badge ${p.activo ? 'badge--success' : 'badge--danger'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
           <td class="admin-table__actions">
@@ -140,7 +145,7 @@
             <button class="admin-table__btn admin-table__btn--delete" data-delete="${p.id}" title="Eliminar" aria-label="Eliminar ${escapeHtml(p.nombre)}"><span class="admin-table__btn-icon">🗑️</span><span class="admin-table__btn-text">Eliminar</span></button>
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
     }
 
     // Delegación de eventos en la tabla (editar / eliminar)
