@@ -9,6 +9,11 @@
   padding: var(--spacing-8) 0;
 }
 
+/* Ocultar destacados cuando hay una busqueda activa */
+.home-featured--hidden {
+  display: none;
+}
+
 .home-categories {
   padding: var(--spacing-8) 0;
   background-color: var(--color-off-white);
