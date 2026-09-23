@@ -511,6 +511,15 @@
   font-weight: 500;
 }
 
+/* Código (SKU) configurado desde el panel de admin */
+.product-detail__code {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-gray-500);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--spacing-1);
+}
+
 /* Bloque de descripción: tipografía normal */
 .product-detail__description-block {
   margin-top: var(--spacing-4);

@@ -73,8 +73,44 @@ export function getWhatsAppNumber(config) {
 }
 
 /**
- * Moneda configurada con fallback
+ * Normaliza el valor de moneda guardado en el panel de admin.
+ * Acepta codigos ISO ('USD', 'cop', 'ARS') y simbolos ('$'), que Intl no
+ * reconoce como codigo de moneda y provocarian un error al formatear precios.
+ * @param {*} raw - Valor de la columna moneda (puede ser null/undefined)
+ * @returns {string} Codigo ISO valido o DEFAULT_CURRENCY como fallback
+ */
+export function normalizeCurrency(raw) {
+  const value = String(raw ?? '').trim();
+  if (!value) return DEFAULT_CURRENCY;
+
+  // Si ya es un codigo ISO de 3 letras, usarlo tal cual (en mayusculas)
+  if (/^[A-Za-z]{3}$/.test(value)) return value.toUpperCase();
+
+  // Si el admin configuro un simbolo u otro texto no valido, mapearlo a
+  // un codigo conocido para que los precios sigan mostrandose correctamente
+  const symbolMap = {
+    '$': 'USD',   // simbolo generico (muchos paises lo usan)
+    'US$': 'USD',
+    'Q': 'GTQ',
+    'Bs': 'VES',
+    '₡': 'CRC',
+    'L': 'HNL',
+    'C$': 'NIO',
+    'B/.': 'PAB',
+    '₲': 'PYG',
+    'S/': 'PEN',
+    '$U': 'UYU',
+    'Bs.': 'BOB'
+  };
+  if (symbolMap[value]) return symbolMap[value];
+
+  console.warn(`Moneda configurada "${value}" no es un codigo ISO valido (ej: USD, COP, MXN). Usando ${DEFAULT_CURRENCY}.`);
+  return DEFAULT_CURRENCY;
+}
+
+/**
+ * Moneda configurada con fallback (normalizada a codigo ISO valido)
  */
 export function getCurrency(config) {
-  return config?.moneda || DEFAULT_CURRENCY;
+  return normalizeCurrency(config?.moneda);
 }

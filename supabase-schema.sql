@@ -22,6 +22,7 @@ create table categorias (
 -- ============================================
 create table productos (
   id uuid primary key default gen_random_uuid(),
+  codigo text unique, -- código/SKU interno configurable desde el panel de admin
   nombre text not null,
   descripcion text,
   precio numeric(10,2) not null check (precio >= 0),
@@ -44,6 +45,9 @@ begin
   return new;
 end;
 $$ language plpgsql;
+
+-- Migración para bases de datos existentes: agrega la columna codigo (SKU)
+alter table productos add column if not exists codigo text unique;
 
 create trigger update_productos_updated_at
   before update on productos

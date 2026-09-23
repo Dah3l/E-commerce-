@@ -49,6 +49,7 @@
             <thead>
               <tr>
                 <th>Imagen</th>
+                <th>Código</th>
                 <th>Nombre</th>
                 <th>Categoría</th>
                 <th>Precio</th>
@@ -119,12 +120,12 @@
     function renderProductos() {
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
       const filtered = search
-        ? productos.filter(p => (p.nombre || '').toLowerCase().includes(search))
+        ? productos.filter(p => (p.nombre || '').toLowerCase().includes(search) || (p.codigo || '').toLowerCase().includes(search))
         : productos;
       const tbody = document.getElementById('productosTableBody');
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px;">${search ? 'Sin resultados para la búsqueda' : 'No hay productos. Crea el primero con "➕ Nuevo Producto".'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px;">${search ? 'Sin resultados para la búsqueda' : 'No hay productos. Crea el primero con "➕ Nuevo Producto".'}</td></tr>`;
         return;
       }
 
@@ -133,6 +134,7 @@
         return `
         <tr>
           <td class="cell-img"><img src="${escapeHtml(imageUrl(p))}" alt="" loading="lazy" onerror="this.src='../assets/icons/placeholder.svg'"></td>
+          <td>${p.codigo ? `<code>${escapeHtml(p.codigo)}</code>` : '<span style="color:#9CA3AF;">—</span>'}</td>
           <td class="cell-product">
             <div class="cell-product__name">${escapeHtml(p.nombre)}</div>
             ${desc ? `<div class="cell-product__desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>` : ''}
@@ -163,6 +165,7 @@
 
     function productoFields(p = {}) {
       return [
+        { id: 'codigo', label: 'Código (SKU)', type: 'text', value: p.codigo || '', placeholder: 'Ej: LEG-ASTR-001' },
         { id: 'nombre', label: 'Nombre', type: 'text', required: true, value: p.nombre || '' },
         { id: 'descripcion', label: 'Descripción', type: 'textarea', value: p.descripcion || '' },
         { id: 'precio', label: 'Precio', type: 'number', required: true, step: '0.01', min: 0, value: p.precio ?? '' },
@@ -209,6 +212,7 @@
       }
 
       const data = {
+        codigo: String(values.codigo || '').trim() || null,
         nombre: values.nombre.trim(),
         descripcion: values.descripcion.trim() || null,
         precio: parseFloat(values.precio),
@@ -223,14 +227,27 @@
       if (isNaN(data.precio)) return { error: 'El precio debe ser un número válido' };
 
       if (existing) {
-        const { error } = await supabase.from('productos').update(data).eq('id', existing.id);
+        let { error } = await supabase.from('productos').update(data).eq('id', existing.id);
+        // Reintento de compatibilidad: si la columna "codigo" aún no existe en la BD,
+        // guardar sin ella para que el admin no falle hasta ejecutar la migración SQL.
+        if (error && /codigo/i.test(error.message || '')) {
+          delete data.codigo;
+          ({ error } = await supabase.from('productos').update(data).eq('id', existing.id));
+        }
         if (error) {
           console.error(error);
           return { error: 'Error guardando cambios: ' + error.message };
         }
       } else {
-        const { error } = await supabase.from('productos').insert([data]);
+        let { error } = await supabase.from('productos').insert([data]);
+        if (error && /codigo/i.test(error.message || '')) {
+          delete data.codigo;
+          ({ error } = await supabase.from('productos').insert([data]));
+        }
         if (error) {
+          if (/duplicate key|unique/i.test(error.message || '')) {
+            return { error: 'Ya existe un producto con ese código. Usa uno distinto o déjalo vacío.' };
+          }
           console.error(error);
           return { error: 'Error creando producto: ' + error.message };
         }

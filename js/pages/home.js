@@ -1,6 +1,6 @@
 import { showToast, renderSiteFooter, renderSiteHeader, initScrollTopButton } from '../ui.js';
 import { getCategories } from '../categorias.js';
-import { getProducts, renderProductsGrid, showProductSkeletons } from '../productos.js';
+import { getProducts, renderProductsGrid, showProductSkeletons, setCurrency } from '../productos.js';
 import { addToCart } from '../carrito.js';
 import { getBizConfig, getCurrency } from '../config-negocio.js';
 
@@ -205,6 +205,7 @@ try {
 config = await getBizConfig() || {};
 } catch (_) { /* usar valores por defecto */ }
 currentCurrency = getCurrency(config);
+setCurrency(currentCurrency); // que las cards usen la moneda del admin
 // Header SIEMPRE visible con carrito + hamburguesa, con el nombre real
 renderSiteHeader('inicio', config);
 renderSiteFooter(config);
