@@ -12,49 +12,6 @@ export function setCurrency(currency) {
   if (currency) currentCurrency = currency;
 }
 
-// Cache de categorías en sessionStorage
-const CATEGORIES_CACHE_KEY = 'categories_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
-/**
- * Obtiene todas las categorías activas
- * @param {boolean} useCache - Usar caché si está disponible
- * @returns {Promise<Array>} Lista de categorías
- */
-export async function getCategories(useCache = true) {
-  // Intentar obtener del caché
-  if (useCache) {
-    const cached = sessionStorage.getItem(CATEGORIES_CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return data;
-      }
-    }
-  }
-  
-  try {
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .eq('activa', true)
-      .order('orden', { ascending: true });
-    
-    if (error) throw error;
-    
-    // Guardar en caché
-    sessionStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }));
-    
-    return data || [];
-  } catch (error) {
-    console.error('Error obteniendo categorías:', error);
-    return [];
-  }
-}
-
 /**
  * Obtiene un producto por su ID
  * @param {string} id - ID del producto
@@ -194,6 +151,11 @@ export async function getProducts(filters = {}) {
     return { data: products, count: count || 0 };
   } catch (error) {
     console.error('Error obteniendo productos:', error);
+    // Avisar en pantalla: antes fallaba en silencio y la tienda parecia vacia
+    try {
+      const { showToast } = await import('./ui.js');
+      showToast('No se pudieron cargar los productos. Revisa tu conexión o recarga la página.', 'error', 6000);
+    } catch (_) { /* si ui.js no carga, al menos queda el log */ }
     return { data: [], count: 0 };
   }
 }
@@ -248,6 +210,11 @@ export function normalizeProduct(product) {
   }
   return {
     ...product,
+    // defensively copy the embedded category relation so an unexpected shape
+    // (e.g. array instead of object) can never crash the card renderer
+    categorias: (product.categorias && typeof product.categorias === 'object' && !Array.isArray(product.categorias))
+      ? product.categorias
+      : (Array.isArray(product.categorias) ? (product.categorias[0] || null) : null),
     precio: Number(product.precio) || 0,
     precio_oferta: product.precio_oferta ? Number(product.precio_oferta) : null,
     stock: Number.isFinite(parsedStock) ? parsedStock : null,
