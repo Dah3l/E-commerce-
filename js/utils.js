@@ -20,20 +20,27 @@ export function formatPrice(amount, currency = DEFAULT_CURRENCY) {
   let code = String(currency || DEFAULT_CURRENCY).trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(code)) code = DEFAULT_CURRENCY;
 
+  const fmt = (cur) => new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: cur,
+    minimumFractionDigits: 2
+  }).format(amount);
+
   try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 2
-    }).format(amount);
+    return withCurrencyCode(fmt(code), code);
   } catch (_) {
     // Moneda con formato ISO valido pero inexistente (ej: "ABC")
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: DEFAULT_CURRENCY,
-      minimumFractionDigits: 2
-    }).format(amount);
+    return withCurrencyCode(fmt(DEFAULT_CURRENCY), DEFAULT_CURRENCY);
   }
+}
+
+/**
+ * Garantiza que el precio formateado muestre tambien el codigo ISO de la
+ * moneda (ej: "$1.99" -> "$1.99 USD"), sin duplicarlo si Intl ya lo incluyo.
+ */
+function withCurrencyCode(formatted, code) {
+  if (!formatted.includes(code)) formatted = `${formatted} ${code}`;
+  return formatted;
 }
 
 /**
