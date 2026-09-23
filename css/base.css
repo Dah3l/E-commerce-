@@ -104,6 +104,8 @@ html {
   font-size: 16px;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  /* Compensar el header fijo al navegar a anclas (#secciones) */
+  scroll-padding-top: var(--header-h, 68px);
 }
 
 body {

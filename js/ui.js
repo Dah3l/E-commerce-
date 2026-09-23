@@ -712,6 +712,67 @@ export function renderSiteHeader(active = '', bizConfig = {}) {
   // Mantener el contador del carrito sincronizado en todas las vistas
   updateGlobalCartCount();
   window.addEventListener('cart-updated', updateGlobalCartCount);
+  // Header "inteligente": se oculta al bajar y reaparece al subir
+  initHeaderAutoHide();
+}
+
+/**
+ * Header auto-ocultable (patrón de tiendas modernas):
+ * - Al scrollear hacia ABAJO, el header se desliza fuera de pantalla para
+ *   aprovechar todo el espacio de contenido.
+ * - Al scrollear hacia ARRIBA, reaparece de inmediato, de modo que el acceso
+ *   al carrito está disponible en todo momento.
+ * - Siempre queda visible cerca del inicio de página y mientras el menú
+ *   hamburguesa esté abierto (para no tapar el desplegable).
+ */
+export function initHeaderAutoHide() {
+  const header = document.querySelector('.site-header');
+  if (!header || header.dataset.autoHide) return;
+  header.dataset.autoHide = '1';
+
+  let lastY = Math.max(window.scrollY, 0);
+  let ticking = false;
+
+  // El header es position:fixed; JS fija su altura real como --header-h
+  // para que el contenido no quede debajo de él.
+  const syncHeaderHeight = () => {
+    document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+  };
+  syncHeaderHeight();
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(syncHeaderHeight).observe(header);
+  } else {
+    window.addEventListener('resize', syncHeaderHeight);
+  }
+
+  const update = () => {
+    const y = Math.max(window.scrollY, 0);
+    const h = header.offsetHeight || 64;
+    const menuOpen = !!document.querySelector('.mobile-nav--open');
+    // Hacia abajo y ya pasada la zona del header -> ocultar.
+    // Hacia arriba -> mostrar inmediatamente.
+    const goingDown = y > lastY && y > h;
+    if ((goingDown && !menuOpen) || y <= h) {
+      header.classList.toggle('site-header--hidden', goingDown && !menuOpen);
+    } else {
+      header.classList.remove('site-header--hidden');
+    }
+    lastY = y;
+    ticking = false;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }, { passive: true });
+
+  // Si el menú móvil/desplegable se abre con el header oculto, mostrarlo
+  document.addEventListener('click', () => {
+    requestAnimationFrame(update);
+  }, { passive: true });
+
+  update();
 }
 
 /**
