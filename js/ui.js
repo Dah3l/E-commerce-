@@ -3,6 +3,8 @@
  * Toasts, modales, loaders y otros componentes de interfaz
  */
 
+import { initThemeToggle } from './theme.js';
+
 /**
  * Muestra un toast/notificación temporal
  * @param {string} message - Mensaje a mostrar
@@ -724,6 +726,8 @@ export function renderSiteHeader(active = '', bizConfig = {}) {
   window.addEventListener('cart-updated', updateGlobalCartCount);
   // Header "inteligente": se oculta al bajar y reaparece al subir
   initHeaderAutoHide();
+  // Botón de modo claro/oscuro junto al carrito (idempotente)
+  initThemeToggle();
 }
 
 /**

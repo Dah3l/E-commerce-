@@ -19,6 +19,20 @@
   
   <!-- Favicon (opcional) -->
   <link rel="icon" type="image/svg+xml" href="./assets/icons/favicon.svg">
+  <!-- Tema claro/oscuro: se aplica ANTES de pintar para evitar flash (ver js/theme.js) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m && t === 'dark') m.setAttribute('content', '#131712');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <!-- Header, menú móvil y overlay se inyectan desde js/ui.js (renderSiteHeader).

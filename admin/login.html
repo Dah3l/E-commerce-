@@ -9,6 +9,20 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/admin.css">
+  <!-- Tema claro/oscuro: se aplica ANTES de pintar para evitar flash (ver js/theme.js) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m && t === 'dark') m.setAttribute('content', '#131712');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body class="admin-login-page">
   <div class="admin-login-card">
@@ -40,6 +54,10 @@
       </button>
     </form>
     
+    <div style="text-align: center; margin-top: var(--spacing-4);">
+      <button type="button" class="theme-toggle theme-toggle--standalone" data-theme-toggle aria-label="Cambiar modo claro/oscuro">🌙</button>
+    </div>
+
     <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6B7280;">
       <a href="../" style="color: var(--color-primary);">← Volver a la tienda</a>
     </p>
@@ -116,6 +134,34 @@
         errorDiv.style.display = 'none';
       }, 5000);
     }
+  </script>
+  <!-- Toggle de tema (login admin) -->
+  <script>
+    (function () {
+      function current() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      }
+      function paint() {
+        var isDark = current() === 'dark';
+        document.querySelectorAll('[data-theme-toggle]').forEach(function (el) {
+          el.textContent = isDark ? '\u{2600}\u{FE0F}' : '\u{1F319}';
+          el.setAttribute('aria-label', isDark ? 'Activar modo claro' : 'Activar modo oscuro');
+        });
+      }
+      document.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-theme-toggle]') : null;
+        if (!b) return;
+        var next = current() === 'dark' ? 'light' : 'dark';
+        document.documentElement.classList.add('theme-animations');
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (err) {}
+        setTimeout(function () {
+          document.documentElement.classList.remove('theme-animations');
+        }, 400);
+        paint();
+      });
+      paint();
+    })();
   </script>
 </body>
 </html>

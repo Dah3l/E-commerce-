@@ -8,6 +8,20 @@
   <link rel="stylesheet" href="../css/layout.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/admin.css">
+  <!-- Tema claro/oscuro: se aplica ANTES de pintar para evitar flash (ver js/theme.js) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t !== 'light' && t !== 'dark') {
+          t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m && t === 'dark') m.setAttribute('content', '#131712');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <div class="admin-layout">
@@ -19,6 +33,12 @@
           <li class="admin-nav__item"><a href="./productos.html" class="admin-nav__link"><span class="admin-nav__icon">📦</span>Productos</a></li>
           <li class="admin-nav__item"><a href="./categorias.html" class="admin-nav__link"><span class="admin-nav__icon">📂</span>Categorías</a></li>
           <li class="admin-nav__item"><a href="./configuracion.html" class="admin-nav__link active"><span class="admin-nav__icon">⚙️</span>Configuración</a></li>
+          <li class="admin-nav__item">
+            <a href="#" class="admin-nav__link" data-theme-toggle role="button" aria-label="Cambiar modo claro/oscuro">
+              <span class="admin-nav__icon" data-theme-icon>🌙</span>
+              <span data-theme-label>Modo oscuro</span>
+            </a>
+          </li>
           <li class="admin-nav__item" style="margin-top: 20px;"><a href="../" class="admin-nav__link" target="_blank"><span class="admin-nav__icon">🏪</span>Ver Tienda</a></li>
         </ul>
       </nav>
@@ -140,6 +160,39 @@
     });
 
     document.addEventListener('DOMContentLoaded', loadConfig);
+  </script>
+  <!-- Toggle de tema (panel admin): mismo mecanismo que js/theme.js -->
+  <script>
+    (function () {
+      var ICONS = { light: '\u{1F319}', dark: '\u{2600}\u{FE0F}' };
+      function current() {
+        var t = document.documentElement.getAttribute('data-theme');
+        return t === 'dark' ? 'dark' : 'light';
+      }
+      function paint() {
+        var isDark = current() === 'dark';
+        document.querySelectorAll('[data-theme-icon]').forEach(function (el) {
+          el.textContent = isDark ? ICONS.dark : ICONS.light;
+        });
+        document.querySelectorAll('[data-theme-label]').forEach(function (el) {
+          el.textContent = isDark ? 'Modo claro' : 'Modo oscuro';
+        });
+      }
+      document.addEventListener('click', function (e) {
+        var link = e.target.closest ? e.target.closest('[data-theme-toggle]') : null;
+        if (!link) return;
+        e.preventDefault();
+        var next = current() === 'dark' ? 'light' : 'dark';
+        document.documentElement.classList.add('theme-animations');
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('theme', next); } catch (err) {}
+        setTimeout(function () {
+          document.documentElement.classList.remove('theme-animations');
+        }, 400);
+        paint();
+      });
+      paint();
+    })();
   </script>
 </body>
 </html>

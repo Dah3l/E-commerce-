@@ -133,7 +133,7 @@
   font-size: var(--font-size-base);
   line-height: 1.5;
   color: var(--color-gray-800);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border: 2px solid var(--color-gray-300);
   border-radius: var(--radius-md);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -220,7 +220,7 @@
    PRODUCT CARD
    ============================================ */
 .product-card {
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-md);
@@ -367,7 +367,7 @@
    ============================================ */
 .category-card {
   display: block;
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-md);
@@ -462,7 +462,7 @@
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-3) var(--spacing-4);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   border-left: 4px solid;
@@ -534,7 +534,7 @@
 .loader-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: color-mix(in srgb, var(--color-bg) 88%, transparent);
   z-index: var(--z-modal-backdrop);
   display: flex;
   align-items: center;
@@ -595,7 +595,7 @@
 }
 
 .modal {
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   max-width: 500px;
@@ -615,7 +615,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-4) var(--spacing-5);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal__title {
@@ -647,7 +647,7 @@
   justify-content: flex-end;
   gap: var(--spacing-3);
   padding: var(--spacing-4) var(--spacing-5);
-  border-top: 1px solid var(--color-gray-200);
+  border-top: 1px solid var(--color-border);
   background-color: var(--color-gray-50);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
@@ -681,7 +681,7 @@
   font-size: var(--font-size-base);
   border: 2px solid var(--color-gray-300);
   border-radius: var(--radius-full);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -726,7 +726,7 @@
   width: 36px;
   height: 36px;
   border: 2px solid var(--color-gray-300);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border-radius: var(--radius-md);
   font-size: var(--font-size-lg);
   color: var(--color-gray-700);
@@ -845,7 +845,7 @@
   margin-bottom: var(--spacing-6);
   padding: var(--spacing-3) var(--spacing-4);
   background-color: var(--color-gray-50);
-  border: 1px solid var(--color-gray-200);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 8px);
 }
 
@@ -885,7 +885,7 @@
   font-family: inherit;
   font-size: var(--font-size-sm);
   color: var(--color-gray-800);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234B5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 10px center;
@@ -925,7 +925,7 @@
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-gray-600);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border: 1.5px solid var(--color-gray-300);
   border-radius: 999px;
   padding: 7px 16px;
@@ -961,4 +961,40 @@
   .sort-bar__toggle-pill {
     justify-content: center;
   }
+}
+
+/* ============================================
+   BOTÓN MODO CLARO/OSCURO (js/theme.js)
+   ============================================ */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  font-size: 1.15rem;
+  line-height: 1;
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.theme-toggle:hover {
+  background-color: var(--color-gray-200);
+  border-color: var(--color-gray-300);
+  transform: scale(1.06);
+}
+
+.theme-toggle:active {
+  transform: scale(0.96);
+}
+
+/* Variante suelta (p. ej. pantalla de login del admin) */
+.theme-toggle--standalone {
+  width: 44px;
+  height: 44px;
+  font-size: 1.25rem;
 }

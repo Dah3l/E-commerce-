@@ -19,7 +19,24 @@
   --color-accent: #FF7F50;         /* Naranja coral para CTAs */
   --color-accent-dark: #FF6347;
   
-  /* Colores neutros */
+  /* ============================================
+     TOKENS SEMÁNTICOS (cambian según tema)
+     Toda la UI usa estos colores "temables":
+     surface = superficies (cards, header, modales)
+     bg      = fondo de página
+     text    = tipografía
+     border  = bordes/divisores
+     ============================================ */
+  --color-surface: #FFFFFF;          /* superficie principal (cards/header) */
+  --color-surface-2: #F5F6F3;        /* superficie alterna (tinte cálido) */
+  --color-bg: #F7F8F4;               /* fondo de página (no blanco puro) */
+  --color-bg-muted: #EEF0E9;         /* secciones alternas */
+  --color-text: #232A1F;             /* texto principal */
+  --color-text-muted: #5C6555;       /* texto secundario */
+  --color-border: #DFE3D8;           /* bordes suaves */
+  --shadow-color: 0 0 0;             /* componente RGB para sombras */
+
+  /* Colores neutros (paleta base, no temable) */
   --color-white: #FFFFFF;
   --color-off-white: #F9FAFB;
   --color-gray-50: #F9FAFB;
@@ -69,11 +86,11 @@
   --radius-xl: 1rem;      /* 16px */
   --radius-full: 9999px;
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Shadows (usan --shadow-color para poder aclararse en modo oscuro) */
+  --shadow-sm: 0 1px 2px 0 rgb(var(--shadow-color) / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(var(--shadow-color) / 0.1), 0 2px 4px -1px rgb(var(--shadow-color) / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(var(--shadow-color) / 0.1), 0 4px 6px -2px rgb(var(--shadow-color) / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(var(--shadow-color) / 0.1), 0 10px 10px -5px rgb(var(--shadow-color) / 0.04);
   
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -112,9 +129,12 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: 1.6;
-  color: var(--color-gray-800);
-  background-color: var(--color-white);
+  color: var(--color-text);
+  background-color: var(--color-bg);
   min-height: 100vh;
+  /* Transición suave al cambiar entre modo claro/oscuro (ver js/theme.js).
+     Se limita a color/fondo para no animar el resto de la UI. */
+  transition: background-color var(--transition-base), color var(--transition-base);
   /* Sticky footer: el body actua como columna flex para que <main> crezca
      y el footer quede SIEMPRE pegado al pie de la ventana, incluso en paginas
      cortas (asi en desktop no queda una franja oscura flotando con blanco
@@ -143,7 +163,7 @@ main,
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.2;
-  color: var(--color-gray-900);
+  color: var(--color-text);
   margin-bottom: var(--spacing-4);
 }
 
@@ -291,4 +311,60 @@ img[loading="lazy"] {
     --color-gray-600: #000000;
     --color-gray-700: #000000;
   }
+}
+
+/* ============================================
+   MODO OSCURO (temas claro/oscuro)
+   js/theme.js añade data-theme="dark" a <html> segun la eleccion del
+   usuario (localStorage) o la preferencia del sistema. Las transiciones
+   suaves se activan solo con .theme-animations para no animar al cargar.
+   ============================================ */
+:root[data-theme="dark"] {
+  /* Superficies y fondo: grises verdosos oscuros (misma familia que el claro) */
+  --color-surface: #1E241C;        /* cards, header, modales */
+  --color-surface-2: #242B22;      /* superficie alterna */
+  --color-bg: #131712;             /* fondo de página */
+  --color-bg-muted: #1A1F18;       /* secciones alternas */
+
+  /* Tipografía */
+  --color-text: #E9EDE5;
+  --color-text-muted: #A7B0A0;
+  --color-border: #333B31;
+
+  /* Acentos algo más vivos sobre fondo oscuro */
+  --color-primary: #8FBC5A;
+  --color-primary-dark: #A3CC74;   /* hover = más claro en modo oscuro */
+  --color-primary-light: #5E7A3A;
+  --color-secondary: #3FD0C5;
+  --color-secondary-dark: #5CD9D0;
+  --color-accent: #FF9370;
+  --color-accent-dark: #FFA68A;
+
+  /* Sombras casi invisibles en oscuro: se compensa con bordes */
+  --shadow-color: 0 0 0;
+
+  /* Neutros usados como fondos suaves (chips, filas alternas, skeleton) */
+  --color-gray-50: #1B211A;
+  --color-gray-100: #232A21;
+  --color-gray-200: #2C342A;
+  --color-gray-300: #3A4338;
+  --color-gray-400: #6E786A;
+  --color-gray-500: #98A292;
+  --color-gray-600: #B4BEAE;
+  --color-gray-700: #CFD6CA;
+  --color-gray-800: #E4E9DF;
+  --color-gray-900: #EDF1E9;
+
+  /* Footer: en oscuro es una superficie clara-inversa respecto al bg */
+  --footer-bg: var(--color-surface-2);
+}
+
+/* Transición general al cambiar de tema (solo mientras dura el cambio) */
+.theme-animations *,
+.theme-animations *::before,
+.theme-animations *::after {
+  transition: background-color var(--transition-base),
+              color var(--transition-base),
+              border-color var(--transition-base),
+              box-shadow var(--transition-base) !important;
 }
