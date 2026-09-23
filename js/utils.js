@@ -4,27 +4,40 @@
  */
 
 import { DEFAULT_CURRENCY } from './config.js';
+import { getActiveCurrency, convertAmount } from './moneda.js';
 
 /**
- * Formatea un n√∫mero como precio en la moneda configurada
- * @param {number} amount - Cantidad a formatear
- * @param {string} currency - C√≥digo de moneda (opcional)
+ * Formatea un n√∫mero como precio aplicando la moneda elegida por el comprador.
+ * Los importes se guardan en la BD en la moneda base del negocio (normalmente
+ * USD) y aqui se convierten a CUP si el usuario selecciono esa moneda, usando
+ * la tasa configurada por el admin (ej: 1 USD = 700 CUP).
+ * @param {number} amount - Cantidad en la moneda base (USD)
+ * @param {string} [fallbackCurrency] - Moneda base configurada (opcional)
  * @returns {string} Precio formateado
  */
-export function formatPrice(amount, currency = DEFAULT_CURRENCY) {
+export function formatPrice(amount, fallbackCurrency = DEFAULT_CURRENCY) {
   if (amount === null || amount === undefined) return '';
-  
+
+  // Moneda visible: la que eligio el comprador (USD o CUP). Si no hay
+  // seleccion valida, se usa la moneda base indicada por quien llama.
+  let code = String(getActiveCurrency() || fallbackCurrency || DEFAULT_CURRENCY)
+    .trim().toUpperCase();
   // Normalizar codigo de moneda: debe ser ISO de 3 letras (USD, COP, MXN...).
   // Si el admin configuro algo invalido (simbolo "$", texto libre, etc.)
   // se cae al default para evitar que Intl lance RangeError.
-  let code = String(currency || DEFAULT_CURRENCY).trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(code)) code = DEFAULT_CURRENCY;
+
+  // Importe ya convertido (USD -> CUP segun la tasa del admin)
+  const value = convertAmount(Number(amount) || 0);
+  // En CUP los precios se muestran en pesos enteros (sin decimales)
+  const isCup = code === 'CUP';
 
   const fmt = (cur) => new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: cur,
-    minimumFractionDigits: 2
-  }).format(amount);
+    minimumFractionDigits: isCup ? 0 : 2,
+    maximumFractionDigits: isCup ? 0 : 2
+  }).format(value);
 
   try {
     return withCurrencyCode(fmt(code), code);
@@ -199,8 +212,8 @@ export function escapeHtml(text) {
 
 /**
  * Convierte texto plano en HTML seguro preservando su formato:
- * - Los saltos de lÌnea simples se respetan (se convierten en <br>).
- * - Los p·rrafos (separados por doble salto de lÌnea) se envuelven en <p>.
+ * - Los saltos de l√≠nea simples se respetan (se convierten en <br>).
+ * - Los p√°rrafos (separados por doble salto de l√≠nea) se envuelven en <p>.
  * Todo el contenido se escapa primero, por lo que es seguro insertarlo con innerHTML.
  * @param {string} text - Texto plano (posible multilinea)
  * @returns {string} HTML escapado y formateado
@@ -209,7 +222,7 @@ export function formatPlainText(text) {
   if (!text || !String(text).trim()) return '';
 
   const escaped = escapeHtml(String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n')).replace(/\n/g, '<br>');
-  // Separar p·rrafos (doble salto de lÌnea) en bloques <p>
+  // Separar p√°rrafos (doble salto de l√≠nea) en bloques <p>
   return escaped
     .split(/(?:<br>\s*){2,}/)
     .map(p => p.trim())

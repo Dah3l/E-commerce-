@@ -763,6 +763,77 @@
 }
 
 /* ============================================
+   SELECTOR DE MONEDA (USD / CUP) - Home
+   ============================================ */
+.currency-bar {
+  width: 100%;
+  margin-bottom: var(--spacing-5);
+}
+
+.currency-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-2) var(--spacing-3);
+}
+
+.currency-bar__label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.currency-switch {
+  display: inline-flex;
+  background-color: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.currency-switch__btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.currency-switch__btn:hover:not(:disabled):not(.currency-switch__btn--active) {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.currency-switch__btn--active {
+  background-color: #fff;
+  color: var(--color-primary-dark, #556B2F);
+  box-shadow: var(--shadow-sm);
+}
+
+.currency-switch__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.currency-switch__btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.currency-bar__rate {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+/* ============================================
    BARRA DE FILTROS / ORDEN (Todos los Productos)
    ============================================ */
 .sort-bar {

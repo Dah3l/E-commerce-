@@ -42,7 +42,7 @@
             <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="email"></div>
             <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-input" id="direccion"></div>
             <div class="form-group"><label class="form-label">Horario</label><input type="text" class="form-input" id="horario"></div>
-            <div class="form-group"><label class="form-label">Moneda</label><input type="text" class="form-input" id="moneda" placeholder="USD" maxlength="3" style="text-transform:uppercase"><small class="form-hint" style="display:block;color:#6B7280;font-size:12px;margin-top:4px;">Código ISO de 3 letras: USD, COP, MXN, ARS, PEN, EUR...</small></div>
+            <div class="form-group"><label class="form-label form-label--required">Tasa de cambio: ¿cuántos CUP equivalen a 1 USD?</label><input type="number" class="form-input" id="tasa_cambio_cup" min="1" step="any" placeholder="700" required><small class="form-hint" style="display:block;color:#6B7280;font-size:12px;margin-top:4px;">Ejemplo: si 1 USD = 700 CUP, escribe <strong>700</strong>. Los precios se guardan en USD y la tienda los muestra en USD o CUP según la moneda que elija el comprador en el Home.</small></div>
             <button type="submit" class="btn btn--primary">Guardar Configuración</button>
           </form>
         </div>
@@ -84,7 +84,8 @@
         document.getElementById('email').value = data.email || '';
         document.getElementById('direccion').value = data.direccion || '';
         document.getElementById('horario').value = data.horario || '';
-        document.getElementById('moneda').value = data.moneda || 'USD';
+        // Tasa de cambio USD -> CUP (los precios se guardan en USD)
+        document.getElementById('tasa_cambio_cup').value = data.tasa_cambio_cup ?? '';
       }
     }
 
@@ -98,13 +99,17 @@
         email: document.getElementById('email').value,
         direccion: document.getElementById('direccion').value,
         horario: document.getElementById('horario').value,
-        moneda: (() => {
-          const m = document.getElementById('moneda').value.trim().toUpperCase();
-          if (m && !/^[A-Z]{3}$/.test(m)) {
-            showToast('La moneda debe ser un código ISO de 3 letras (ej: USD, COP)', 'error');
-            throw new Error('moneda_invalida');
+        // Moneda base de los precios: siempre USD (los productos se guardan en USD)
+        moneda: 'USD',
+        // Cuántos CUP equivalen a 1 USD (el admin lo define aquí)
+        tasa_cambio_cup: (() => {
+          const raw = document.getElementById('tasa_cambio_cup').value;
+          const rate = Number(raw);
+          if (!raw || !Number.isFinite(rate) || rate <= 0) {
+            showToast('Indica cuántos CUP equivalen a 1 USD (ej: 700)', 'error');
+            throw new Error('tasa_invalida');
           }
-          return m || 'USD';
+          return Math.round(rate * 100) / 100;
         })(),
         updated_at: new Date().toISOString()
       };

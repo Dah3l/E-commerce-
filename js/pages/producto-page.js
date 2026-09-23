@@ -2,7 +2,8 @@ import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGri
 import { addToCart, getCart } from '../carrito.js';
 import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { formatPrice, getUrlParam, formatPlainText } from '../utils.js';
-import { getBizConfig, getCurrency, getWhatsAppNumber } from '../config-negocio.js';
+import { getBizConfig, getCurrency, getWhatsAppNumber, getCupRate } from '../config-negocio.js';
+import { setBaseCurrency, setCupRate, refreshPriceElements } from '../moneda.js';
 
 // El header se inyecta en init() con el nombre real del negocio
 initScrollTopButton();
@@ -67,9 +68,13 @@ if (p.codigo) {
 
 const tieneOferta = p.precio_oferta && p.precio_oferta < p.precio;
 const final = tieneOferta ? p.precio_oferta : p.precio;
-document.getElementById('pdpPrice').textContent = formatPrice(final, currency);
+const priceEl = document.getElementById('pdpPrice');
+priceEl.textContent = formatPrice(final, currency);
+// data-price-usd permite reconvertir el precio al cambiar USD/CUP sin recargar
+priceEl.dataset.priceUsd = final;
 const oldEl = document.getElementById('pdpOldPrice');
 oldEl.textContent = tieneOferta ? formatPrice(p.precio, currency) : '';
+if (tieneOferta) oldEl.dataset.priceUsd = p.precio; else delete oldEl.dataset.priceUsd;
 oldEl.style.display = tieneOferta ? 'inline' : 'none';
 document.getElementById('pdpOfferBadge').style.display = tieneOferta ? 'inline-block' : 'none';
 
@@ -226,6 +231,10 @@ try {
 bizConfig = await getBizConfig();
 currency = getCurrency(bizConfig);
 setCurrency(currency);
+// Moneda base + tasa CUP definidas por el admin (los precios se guardan en USD)
+setBaseCurrency(currency);
+setCupRate(getCupRate(bizConfig));
+refreshPriceElements();
 } catch (_) { /* defaults */ }
 // Header SIEMPRE visible (logo real + carrito + hamburguesa)
 renderSiteHeader('', bizConfig);

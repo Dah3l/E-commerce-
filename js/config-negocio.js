@@ -65,6 +65,15 @@ export function clearConfigCaches() {
 }
 
 /**
+ * El comprador puede elegir la moneda de visualización (USD o CUP). Cuando lo
+ * hace limpiamos la caché de configuración para que la próxima lectura traiga
+ * fresca la tasa de cambio definida por el admin.
+ */
+window.addEventListener('currency-changed', () => {
+  try { localStorage.removeItem(CACHE_KEY); } catch (_) { /* sin storage */ }
+});
+
+/**
  * Número de WhatsApp normalizado (solo dígitos) o '' si no está configurado
  */
 export function getWhatsAppNumber(config) {
@@ -113,4 +122,30 @@ export function normalizeCurrency(raw) {
  */
 export function getCurrency(config) {
   return normalizeCurrency(config?.moneda);
+}
+
+
+/**
+ * Tasa de cambio configurada por el admin: cuántos CUP equivalen a 1 USD
+ * (columna tasa_cambio_cup). Devuelve 0 si no está configurada o es inválida,
+ * en cuyo caso la tienda solo puede mostrar precios en la moneda base.
+ * @param {Object} config - Configuración del negocio
+ * @returns {number}
+ */
+export function getCupRate(config) {
+  const rate = Number(config?.tasa_cambio_cup);
+  return Number.isFinite(rate) && rate > 0 ? rate : 0;
+}
+
+/**
+ * Texto legible de la tasa para mostrarlo en la tienda (ej: "1 USD ≈ 700 CUP")
+ * @param {Object} config - Configuración del negocio
+ * @param {string} [baseCurrency] - Moneda base de los precios
+ * @returns {string} '' si no hay tasa configurada
+ */
+export function getRateLabel(config, baseCurrency = 'USD') {
+  const rate = getCupRate(config);
+  if (!rate) return '';
+  const pretty = Number.isInteger(rate) ? rate.toLocaleString('en-US') : rate.toFixed(2);
+  return `1 ${String(baseCurrency || 'USD').toUpperCase()} = ${pretty} CUP`;
 }

@@ -400,9 +400,9 @@ export function renderProductCard(product) {
         
         <div class="product-card__price">
           ${tieneOferta ? `
-            <span class="product-card__price--old">${formatPrice(product.precio, currentCurrency || undefined)}</span>
+            <span class="product-card__price--old" data-price-usd="${product.precio}">${formatPrice(product.precio, currentCurrency || undefined)}</span>
           ` : ''}
-          <span class="product-card__price--current">${formatPrice(precioFinal, currentCurrency || undefined)}</span>
+          <span class="product-card__price--current" data-price-usd="${precioFinal}">${formatPrice(precioFinal, currentCurrency || undefined)}</span>
         </div>
         
         <button 
