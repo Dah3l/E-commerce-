@@ -71,7 +71,7 @@
     import { isAuthenticated, logout } from '../js/auth.js';
     import { supabase, uploadImage, getStorageUrl, deleteImage } from '../js/supabase-client.js';
     import { showToast, showConfirmModal, showFormModal, escapeHtml } from '../js/ui.js';
-    import { normalizeProduct } from '../js/productos.js';
+    import { normalizeProduct, PRODUCT_SELECT_COLUMNS } from '../js/productos.js';
     import { clearConfigCaches } from '../js/config-negocio.js';
 
     if (!isAuthenticated()) window.location.href = './login.html';
@@ -142,14 +142,36 @@
         categorias.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
     }
 
+    // Estado de compatibilidad: si la BD aun no tiene la columna "codigo"
+    // (no se ejecuto la migracion SQL), las consultas que la referencian
+    // fallan. Lo detectamos una vez y a partir de ahi consultamos sin "codigo"
+    // para que la lista de productos SIEMPRE se muestre.
+    let bdSinColumnaCodigo = false;
+
+    function esErrorColumnaCodigo(error) {
+      const msg = String(error?.message || '');
+      return /codigo/i.test(msg) && /column|does not exist|schema cache|42703|PGRST202/i.test(msg);
+    }
+
     async function loadProductos() {
       const filtroCat = document.getElementById('filtroCategoria').value;
-      let query = supabase.from('productos').select('*, categorias(nombre)').order('created_at', { ascending: false });
-      if (filtroCat) query = query.eq('categoria_id', filtroCat);
-      const { data, error } = await query;
+      const runQuery = () => {
+        let q = supabase
+          .from('productos')
+          .select(bdSinColumnaCodigo ? PRODUCT_SELECT_COLUMNS.noCodigo : PRODUCT_SELECT_COLUMNS.conCodigo)
+          .order('created_at', { ascending: false });
+        if (filtroCat) q = q.eq('categoria_id', filtroCat);
+        return q;
+      };
+      let { data, error } = await runQuery();
+      if (error && !bdSinColumnaCodigo && esErrorColumnaCodigo(error)) {
+        console.warn('La columna "codigo" no existe en la BD todavia. Ejecuta la migracion SQL (ver supabase-schema.sql). Cargando sin codigo...');
+        bdSinColumnaCodigo = true;
+        ({ data, error } = await runQuery());
+      }
       if (error) {
         console.error('Error cargando productos:', error);
-        showToast('No se pudieron cargar los productos', 'error');
+        showToast('No se pudieron cargar los productos: ' + (error.message || 'error desconocido'), 'error', 6000);
         return;
       }
       productos = (data || []).map(normalizeProduct);
@@ -165,7 +187,7 @@
     function renderProductos() {
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
       const filtered = search
-        ? productos.filter(p => (p.nombre || '').toLowerCase().includes(search) || (p.codigo || '').toLowerCase().includes(search))
+        ? productos.filter(p => (p.nombre || '').toLowerCase().includes(search) || String(p.codigo || '').toLowerCase().includes(search))
         : productos;
       const tbody = document.getElementById('productosTableBody');
 
@@ -320,8 +342,9 @@
         let { error } = await supabase.from('productos').update(data).eq('id', existing.id);
         // Reintento de compatibilidad: si la columna "codigo" aún no existe en la BD,
         // guardar sin ella para que el admin no falle hasta ejecutar la migración SQL.
-        if (error && /codigo/i.test(error.message || '')) {
+        if (error && esErrorColumnaCodigo(error)) {
           delete data.codigo;
+          bdSinColumnaCodigo = true;
           ({ error } = await supabase.from('productos').update(data).eq('id', existing.id));
         }
         if (error) {
@@ -330,8 +353,9 @@
         }
       } else {
         let { error } = await supabase.from('productos').insert([data]);
-        if (error && /codigo/i.test(error.message || '')) {
+        if (error && esErrorColumnaCodigo(error)) {
           delete data.codigo;
+          bdSinColumnaCodigo = true;
           ({ error } = await supabase.from('productos').insert([data]));
         }
         if (error) {
