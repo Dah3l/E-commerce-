@@ -218,6 +218,32 @@ renderSiteFooter(config);
 if (config.nombre_negocio) {
 document.title = `${config.nombre_negocio} - Inicio`;
 }
+applyHeroText(config);
+}
+
+/**
+ * El texto del hero ("Bienvenido a ...") y su subtítulo salen de la
+ * configuración del negocio (panel de admin): nombre_negocio y descripcion.
+ * Si el admin aún no los define, se mantiene el texto estático del HTML.
+ */
+function applyHeroText(config) {
+const titleEl = document.getElementById('hero-title');
+const subtitleEl = document.querySelector('.hero__subtitle');
+const name = (config?.nombre_negocio || '').trim();
+const description = (config?.descripcion || '').trim();
+
+if (titleEl && name) {
+titleEl.textContent = `Bienvenido a ${name}`;
+}
+if (subtitleEl && description) {
+subtitleEl.textContent = description;
+}
+// Meta description coherente con lo que muestra el hero (setAttribute no
+// interpreta HTML, así que basta con normalizar saltos de línea).
+const meta = document.querySelector('meta[name="description"]');
+if (meta && description) {
+meta.setAttribute('content', description.replace(/\s+/g, ' ').trim());
+}
 }
 
 // Buscador del hero: al pulsar buscar, va directamente a los productos y

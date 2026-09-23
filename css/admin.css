@@ -658,3 +658,83 @@
   color: #991B1B;
   border-left: 4px solid var(--color-error);
 }
+
+/* ============================================
+   MODO OSCURO — PANEL DE ADMINISTRACIÓN
+   Las tablas, badges y alertas del admin usaban colores claros fijados
+   directamente (#FAFBFC, #D1FAE5, ...). Sobre el fondo oscuro de la tienda
+   esas filas/badges quedaban "quemadas" y con texto ilegible. Aquí se
+   redefinen a superficies oscuras con texto pastel del mismo tono.
+   ============================================ */
+:root[data-theme="dark"] .admin-table tbody tr:nth-child(even) {
+  background-color: #1B211A;
+}
+
+:root[data-theme="dark"] .admin-table tbody tr:hover,
+:root[data-theme="dark"] .admin-table tr:hover {
+  background-color: #27313F;
+}
+
+:root[data-theme="dark"] .badge--success {
+  background-color: rgba(16, 185, 129, 0.18);
+  color: #6EE7B7;
+}
+
+:root[data-theme="dark"] .badge--warning,
+:root[data-theme="dark"] .admin-login__blocked {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #FCD34D;
+}
+
+:root[data-theme="dark"] .badge--danger {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #FCA5A5;
+}
+
+:root[data-theme="dark"] .badge--info {
+  background-color: rgba(59, 130, 246, 0.18);
+  color: #93C5FD;
+}
+
+:root[data-theme="dark"] .admin-alert--info {
+  background-color: rgba(59, 130, 246, 0.14);
+  color: #BFDBFE;
+}
+
+:root[data-theme="dark"] .admin-alert--warning {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #FDE68A;
+}
+
+:root[data-theme="dark"] .admin-alert--success {
+  background-color: rgba(16, 185, 129, 0.14);
+  color: #A7F3D0;
+}
+
+:root[data-theme="dark"] .admin-alert--error {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #FECACA;
+}
+
+/* Botones de tabla del admin (borde de color + hover relleno): al invertir
+   los tonos en modo oscuro, el texto blanco del hover quedaba sin contraste
+   suficiente, así que se fuerza texto oscuro sobre el color saturado. */
+:root[data-theme="dark"] .admin-table__btn--edit:hover,
+:root[data-theme="dark"] .admin-table__btn--delete:hover {
+  color: #131712;
+}
+
+/* Inputs/selectores del admin (fechas, checkboxes nativos) heredan el esquema
+   de colores del navegador: en modo oscuro se ven blancos y "quemados". */
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+/* Enlaces de aviso del dashboard (usaban inline #92400E, casi invisible
+   sobre superficie oscura) */
+:root[data-theme="dark"] .admin-main a[style*="#92400E"],
+:root[data-theme="dark"] .admin-alert a {
+  color: #FCD34D;
+}
