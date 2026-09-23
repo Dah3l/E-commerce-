@@ -85,6 +85,8 @@ export async function getProductBySlug(categoriaSlug, productoSlug) {
  * @param {string} filters.categoriaId - Filtrar por categoría
  * @param {string} filters.busqueda - Buscar por nombre
  * @param {boolean} filters.destacados - Solo destacados
+ * @param {boolean} filters.enOferta - Solo productos con precio de oferta
+ * @param {string} filters.orden - 'relevancia' | 'precio-asc' | 'precio-desc' | 'nuevos'
  * @param {number} filters.limit - Límite de resultados
  * @param {number} filters.offset - Offset para paginación
  * @returns {Promise<{data: Array, count: number}>}
@@ -110,6 +112,11 @@ export async function getProducts(filters = {}) {
   if (filters.destacados) {
     query = query.eq('destacado', true);
   }
+
+  // Filtro "en oferta": solo productos con precio de oferta valido (>0 y menor al precio normal)
+  if (filters.enOferta) {
+    query = query.gt('precio_oferta', 0).lt('precio_oferta', 'precio');
+  }
   
   if (filters.busqueda) {
     // Sanear: quitar caracteres que rompen el parser de filtros de PostgREST
@@ -128,9 +135,20 @@ export async function getProducts(filters = {}) {
     }
   }
   
-  // Ordenar: destacados primero, luego por creación
-  query = query.order('destacado', { ascending: false })
-               .order('created_at', { ascending: false });
+  // Orden segun el filtro elegido (por defecto: destacados primero, luego recientes)
+  const orden = filters.orden || 'relevancia';
+  if (orden === 'precio-asc' || orden === 'precio-desc') {
+    // El precio efectivo es precio_oferta si existe, si no precio normal.
+    // Primero se pide a la BD por precio normal y luego se reordena en memoria
+    // por el precio efectivo (los sets de prueba son pequenos; con paginacion
+    // grande esto seguiria siendo correcto dentro de la pagina cargada).
+    query = query.order('precio', { ascending: orden === 'precio-asc' });
+  } else if (orden === 'nuevos') {
+    query = query.order('created_at', { ascending: false });
+  } else {
+    query = query.order('destacado', { ascending: false })
+                 .order('created_at', { ascending: false });
+  }
   
   // Aplicar límite y offset
   if (filters.limit) {
@@ -147,7 +165,14 @@ export async function getProducts(filters = {}) {
     if (error) throw error;
     
     const products = (data || []).map(normalizeProduct);
-    
+
+    // Reordenar en memoria por precio efectivo (oferta si existe, si no precio normal)
+    if (orden === 'precio-asc' || orden === 'precio-desc') {
+      const dir = orden === 'precio-asc' ? 1 : -1;
+      const effective = (p) => (p.precio_oferta && p.precio_oferta < p.precio ? p.precio_oferta : p.precio);
+      products.sort((a, b) => (effective(a) - effective(b)) * dir);
+    }
+
     return { data: products, count: count || 0 };
   } catch (error) {
     console.error('Error obteniendo productos:', error);

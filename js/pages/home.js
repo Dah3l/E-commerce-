@@ -12,6 +12,13 @@ initScrollTopButton();
 let loadedProducts = [];
 let currentCurrency = 'USD';
 
+// Estado de filtros activos de "Todos los Productos"
+const activeFilters = {
+  categoriaId: null,   // null = todas
+  orden: 'relevancia', // relevancia | precio-asc | precio-desc
+  enOferta: false,     // solo productos con oferta
+};
+
 // Delegación de eventos: botones "Añadir al carrito" + navegación a detalle
 document.addEventListener('click', (e) => {
 const btn = e.target.closest('[data-add-to-cart]');
@@ -68,7 +75,8 @@ filtersContainer.querySelectorAll('.category-btn').forEach(b => b.classList.remo
 btn.classList.add('category-btn--active');
 
 const categoryId = btn.dataset.categoryId;
-await loadAllProducts(categoryId || null);
+activeFilters.categoriaId = categoryId || null;
+await loadAllProducts();
 });
 }
 
@@ -116,18 +124,31 @@ section.setAttribute('aria-hidden', String(!visible));
 
 let currentSearch = '';
 
-// Cargar todos los productos (con filtro opcional de categoría y búsqueda)
-async function loadAllProducts(categoriaId = null) {
+// Cargar todos los productos (respeta categoria, busqueda y filtros de orden/oferta)
+async function loadAllProducts() {
+const categoriaId = activeFilters.categoriaId;
 showProductSkeletons('#all-products', 6);
 const { data: featured } = await getProducts({ destacados: true, limit: 6 });
-let { data: products } = await getProducts({ categoriaId, busqueda: currentSearch || undefined, limit: 24 });
+let { data: products } = await getProducts({
+categoriaId,
+busqueda: currentSearch || undefined,
+orden: activeFilters.orden,
+enOferta: activeFilters.enOferta || undefined,
+limit: 24
+});
 
 // Fallback: si la búsqueda tiene acentes y no trajo nada, reintentar sin acentos
 // (cubre productos guardados como "arroz" cuando el usuario escribe "aróz", etc.)
 if (currentSearch && products.length === 0) {
 const desaccented = currentSearch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 if (desaccented !== currentSearch) {
-const retry = await getProducts({ categoriaId, busqueda: desaccented, limit: 24 });
+const retry = await getProducts({
+categoriaId,
+busqueda: desaccented,
+orden: activeFilters.orden,
+enOferta: activeFilters.enOferta || undefined,
+limit: 24
+});
 products = retry.data;
 }
 }
@@ -171,7 +192,8 @@ currentSearch = (rawTerm || '').trim();
 if (!currentSearch) {
 // Busqueda vacia: restaurar vista normal con destacados visibles
 setFeaturedVisible(true);
-await loadAllProducts(null);
+activeFilters.categoriaId = null;
+await loadAllProducts();
 return;
 }
 showToast(`Resultados para "${currentSearch}"`, 'info');
@@ -180,7 +202,8 @@ setFeaturedVisible(false);
 // desactivar filtro de categoria visualmente
 document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
 document.querySelector('.category-btn[data-category-id=""]')?.classList.add('category-btn--active');
-await loadAllProducts(null);
+activeFilters.categoriaId = null;
+await loadAllProducts();
 // Ir directamente a los productos (sin pasar por destacados)
 document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
@@ -195,8 +218,29 @@ input?.addEventListener('input', () => {
 if (!input.value.trim() && currentSearch) {
 currentSearch = '';
 setFeaturedVisible(true);
-loadAllProducts(null);
+loadAllProducts();
 }
+});
+}
+
+// Barra de orden + filtro de ofertas sobre "Todos los Productos"
+function initSortBar() {
+const bar = document.getElementById('sort-bar');
+if (!bar) return;
+
+// Orden por precio (select nativo para accesibilidad y UX movil)
+const sortSelect = bar.querySelector('#product-sort');
+sortSelect?.addEventListener('change', () => {
+activeFilters.orden = sortSelect.value || 'relevancia';
+loadAllProducts();
+});
+
+// Toggle "Solo en oferta"
+const offerToggle = bar.querySelector('#only-offers');
+offerToggle?.addEventListener('change', () => {
+activeFilters.enOferta = offerToggle.checked;
+bar.classList.toggle('sort-bar--offers-active', offerToggle.checked);
+loadAllProducts();
 });
 }
 
@@ -216,6 +260,7 @@ async function init() {
 try {
 await applyBizConfig();
 initSearch();
+initSortBar();
 await loadCategories();
 
 // Soporte para /?categoria=slug (enlaces desde breadcrumb del detalle de producto)
@@ -230,8 +275,9 @@ btn.classList.add('category-btn--active');
 initialCategory = btn.dataset.categoryId || null;
 }
 }
+activeFilters.categoriaId = initialCategory;
 
-await Promise.all([loadFeaturedProducts(), loadAllProducts(initialCategory)]);
+await Promise.all([loadFeaturedProducts(), loadAllProducts()]);
 
 if (catSlug) {
 document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
