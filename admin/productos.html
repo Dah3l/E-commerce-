@@ -68,7 +68,7 @@
 
   <script type="module">
     import { isAuthenticated, logout } from '../js/auth.js';
-    import { supabase, uploadImage, getStorageUrl } from '../js/supabase-client.js';
+    import { supabase, uploadImage, getStorageUrl, deleteImage } from '../js/supabase-client.js';
     import { showToast, showConfirmModal, showFormModal, escapeHtml } from '../js/ui.js';
     import { normalizeProduct } from '../js/productos.js';
     import { clearConfigCaches } from '../js/config-negocio.js';
@@ -112,7 +112,8 @@
 
     function imageUrl(p) {
       if (!p.imagen_url) return '/assets/icons/placeholder.svg';
-      return getStorageUrl(p.imagen_url) || '/assets/icons/placeholder.svg';
+      // getStorageUrl maneja tanto rutas relativas como URLs completas de Supabase
+      return getStorageUrl(p.imagen_url) || (String(p.imagen_url).startsWith('http') ? p.imagen_url : '/assets/icons/placeholder.svg');
     }
 
     function renderProductos() {
@@ -174,20 +175,34 @@
         },
         { id: 'destacado', label: 'Marcar como destacado', type: 'checkbox', value: !!p.destacado },
         { id: 'activo', label: 'Activo (visible en la tienda)', type: 'checkbox', value: p.activo !== false },
-        { id: 'imagenFile', label: 'Imagen', type: 'file', value: p.imagen_url || '' }
+        { id: 'imagenFile', label: 'Imagen', type: 'file', value: p.imagen_url || '', previewUrl: p.imagen_url ? imageUrl(p) : '' }
       ];
     }
 
     async function guardarProducto(values, existing) {
       let imagenUrl = existing?.imagen_url || '';
       let imageWarning = null;
+      // "Quitar imagen" en el modal -> limpiar el campo
+      if (values.imagenFile === undefined) {
+        const oldPath = imagenUrl;
+        imagenUrl = '';
+        if (oldPath) deleteImage(oldPath); // mejor esfuerzo, ignora fallos
+      }
       if (values.imagenFile) {
         const fileName = `${Date.now()}-${values.imagenFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const result = await uploadImage(values.imagenFile, fileName);
         if (result.error) {
-          imageWarning = 'La imagen no se pudo subir. Verifica que el bucket "productos" exista y sea público en Supabase Storage.';
+          const msg = String(result.error.message || '');
+          if (/row-level security|policy/i.test(msg)) {
+            imageWarning = 'Storage te está bloqueando: en Supabase > Storage > bucket "productos" elimina las 2 políticas SELECT de "storage.objects" (son innecesarias en bucket público) y crea una política INSERT con check (bucket_id = \'productos\').';
+          } else if (/not found/i.test(msg)) {
+            imageWarning = 'No se encontró el bucket "productos". Verifica que se escriba exactamente así (minúsculas).';
+          } else {
+            imageWarning = 'La imagen no se pudo subir: ' + (msg || 'error desconocido');
+          }
         } else {
-          imagenUrl = result.url;
+          // Guardamos la RUTA relativa (no la URL) para que sea portable
+          imagenUrl = result.path;
         }
       }
 
@@ -253,6 +268,7 @@
         console.error(error);
         showToast('Error eliminando: ' + error.message, 'error');
       } else {
+        if (p?.imagen_url) deleteImage(p.imagen_url); // limpiar el bucket (mejor esfuerzo)
         showToast('Producto eliminado', 'success');
         clearConfigCaches();
         loadProductos();

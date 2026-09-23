@@ -368,8 +368,9 @@ export function showFormModal(options = {}) {
           return `
             <div class="form-group">
               <label class="form-label" for="${id}">${escapeHtml(f.label)}</label>
+              ${f.previewUrl ? `<div class="fm-file-preview"><img src="${escapeHtml(f.previewUrl)}" alt="Imagen actual" onerror="this.onerror=null;this.src='/assets/icons/placeholder.svg'"><button type="button" class="btn btn--small btn--secondary fm-file-remove" data-fm-remove-file="${escapeHtml(f.id)}">Quitar imagen</button></div>` : `<small style="color:#6B7280;display:block;margin-bottom:6px;">Sin imagen (se mostrará un placeholder).</small>`}
               <input type="file" class="form-input" id="${id}" accept="${f.accept || 'image/*'}">
-              ${f.value ? `<small style="color:#6B7280;">Ya tiene imagen actual. Selecciona un archivo solo si quieres reemplazarla.</small>` : ''}
+              ${f.previewUrl ? `<small style="color:#6B7280;">Selecciona un archivo solo si quieres reemplazar la imagen actual.</small>` : ''}
             </div>`;
         default:
           return `
@@ -413,6 +414,16 @@ export function showFormModal(options = {}) {
     modal.style.visibility = 'visible';
     document.body.style.overflow = 'hidden';
 
+    // Campos de imagen "quitados" con el boton Quitar imagen
+    const removedFiles = new Set();
+    modal.addEventListener('click', (e) => {
+      const rm = e.target.closest('[data-fm-remove-file]');
+      if (!rm) return;
+      removedFiles.add(rm.dataset.fmRemoveFile);
+      const preview = rm.closest('.fm-file-preview');
+      if (preview) preview.remove();
+    });
+
     const getValues = () => {
       const values = {};
       fields.forEach(f => {
@@ -420,7 +431,10 @@ export function showFormModal(options = {}) {
         if (!el) return;
         if (f.type === 'checkbox') values[f.id] = el.checked;
         else if (f.type === 'number') values[f.id] = el.value;
-        else if (f.type === 'file') values[f.id] = el.files && el.files[0] ? el.files[0] : null;
+        else if (f.type === 'file') {
+          if (removedFiles.has(f.id)) values[f.id] = undefined;      // quitar imagen actual
+          else values[f.id] = el.files && el.files[0] ? el.files[0] : null; // null = mantener
+        }
         else values[f.id] = el.value;
       });
       return values;
