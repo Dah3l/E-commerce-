@@ -169,25 +169,41 @@ insert into config_negocio (nombre_negocio, descripcion, telefono, whatsapp, ema
 ('Mi Tienda Online', 'Tu tienda de confianza para productos de comida y aseo personal', '+1234567890', '+1234567890', 'contacto@mitienda.com', 'Calle Principal 123, Ciudad', 'Lunes a Sábado: 9:00 AM - 8:00 PM', 'USD');
 
 -- ============================================
--- 7. CREAR BUCKET DE STORAGE (Instrucciones)
+-- 7. BUCKET DE STORAGE "productos" + POLICIES
 -- ============================================
--- Ejecuta esto en el Dashboard de Supabase > Storage:
--- 1. Ir a Storage
--- 2. Crear bucket llamado "productos"
--- 3. Configurar como público
--- 4. Añadir política para permitir uploads:
---
--- create policy "Permitir upload público"
---   on storage.objects for insert
---   with check (bucket_id = 'productos');
---
--- create policy "Permitir lectura pública"
---   on storage.objects for select
+-- Opccion A (recomendada): ejecutar este SQL en Supabase > SQL Editor.
+-- Crea el bucket publico y las policies necesarias para subir/editar/borrar.
+
+insert into storage.buckets (id, name, public)
+values ('productos', 'productos', true)
+on conflict (id) do update set public = true;
+
+create policy "Productos: insert public"
+  on storage.objects for insert to public
+  with check (bucket_id = 'productos');
+
+create policy "Productos: update public"
+  on storage.objects for update to public
+  using (bucket_id = 'productos')
+  with check (bucket_id = 'productos');
+
+create policy "Productos: delete public"
+  on storage.objects for delete to public
+  using (bucket_id = 'productos');
+
+-- NOTA sobre SELECT: en un bucket PUBLICO no hace falta policy de select para
+-- mostrar las imagenes via la URL publica (/storage/v1/object/public/...).
+-- Si ademas quieres listar/leer objetos desde el cliente autenticado:
+-- create policy "Productos: select public"
+--   on storage.objects for select to public
 --   using (bucket_id = 'productos');
---
--- create policy "Permitir delete público"
---   on storage.objects for delete
---   using (bucket_id = 'productos');
+
+-- IMPORTANTE: si tu panel admin usa login (supabase.auth), el upload se hace
+-- con el token del usuario autenticado; la policy de arriba (to public) lo
+-- permite porque "public" incluye a cualquier rol autenticado anon/authenticated.
+
+-- Opccion B (manual): Dashboard > Storage > New bucket "productos" (public)
+-- y anadir las policies anteriores desde la pestana "Policies".
 
 -- ============================================
 -- FIN DEL ESQUEMA

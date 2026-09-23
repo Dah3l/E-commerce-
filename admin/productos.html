@@ -182,8 +182,10 @@
     async function guardarProducto(values, existing) {
       let imagenUrl = existing?.imagen_url || '';
       let imageWarning = null;
-      // "Quitar imagen" en el modal -> limpiar el campo
-      if (values.imagenFile === undefined) {
+      // "Quitar imagen" en el modal -> limpiar el campo.
+      // IMPORTANTE: solo limpiar si NO se eligio un archivo nuevo. Si el usuario
+      // subio una foto nueva, values.imagenFile es el File y debe conservarse.
+      if (values.imagenFile === undefined && !values.imagenFile) {
         const oldPath = imagenUrl;
         imagenUrl = '';
         if (oldPath) deleteImage(oldPath); // mejor esfuerzo, ignora fallos

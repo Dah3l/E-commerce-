@@ -72,7 +72,19 @@ export async function uploadImage(file, fileName) {
     return { url, path: data.path, error: null };
   } catch (error) {
     console.error('Error subiendo imagen:', error);
-    return { url: null, path: null, error };
+    // Enriquecer el mensaje con las causas mas frecuentes para que el admin
+    // sepa exactamente que corregir en Supabase.
+    const status = error?.statusCode || error?.status;
+    const msg = String(error?.message || '');
+    let hint = '';
+    if (status === 400 && /could not find the bucket/i.test(msg)) {
+      hint = ` El bucket "${STORAGE_BUCKET}" no existe o esta mal escrito (verifica minusculas).`;
+    } else if (status === 403 || /row-level security|policy|unauthorized/i.test(msg)) {
+      hint = ' Te esta bloqueando una policy de storage.objects: hace falta una politica INSERT con check (bucket_id = \'' + STORAGE_BUCKET + '\') y debes haber iniciado sesion como usuario autenticado.';
+    } else if (/size|too large|payload/i.test(msg)) {
+      hint = ' La imagen es demasiado grande para el limite del bucket (revisa Storage > Settings > File size limit).';
+    }
+    return { url: null, path: null, error: Object.assign(new Error(msg + hint), { cause: error }) };
   }
 }
 
