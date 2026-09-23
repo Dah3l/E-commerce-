@@ -679,6 +679,18 @@ export function renderSiteHeader(active = '', bizConfig = {}) {
     initMobileMenu();
     return;
   }
+  // Selector USD/CUP: solo se muestra si el admin configuro una tasa valida.
+  // La eleccion del comprador se persiste y se propaga con el evento
+  // 'currency-change' para que cada pagina re-renderice sus precios.
+  const rateOk = parseFloat(String(bizConfig?.tasa_cup ?? '')) > 0;
+  let savedCur = 'USD';
+  try { savedCur = localStorage.getItem('preferred_currency') || 'USD'; } catch (_) { /* noop */ }
+  if (savedCur === 'CUP' && !rateOk) savedCur = 'USD';
+  const currencySwitcher = rateOk ? `
+          <div class="currency-switch" role="group" aria-label="Seleccionar moneda">
+            <button type="button" class="currency-switch__btn${savedCur === 'USD' ? ' active' : ''}" data-currency="USD" aria-pressed="${savedCur === 'USD'}">USD</button>
+            <button type="button" class="currency-switch__btn${savedCur === 'CUP' ? ' active' : ''}" data-currency="CUP" aria-pressed="${savedCur === 'CUP'}">CUP</button>
+          </div>` : '';
   const link = (href, label, key) =>
     `<li><a href="${href}" class="desktop-nav__link${key === active ? ' active' : ''}">${label}</a></li>`;
   // El menú desplegable NO incluye Carrito (siempre visible en el header)
@@ -699,6 +711,7 @@ export function renderSiteHeader(active = '', bizConfig = {}) {
               ${link('./contacto.html', 'Contacto', 'contacto')}
             </ul>
           </nav>
+          ${currencySwitcher}
           <a href="./carrito.html" class="header__cart" aria-label="Ver carrito">
             <span class="cart-icon">🛒</span>
             <span class="cart-count" style="display: none;">0</span>
@@ -724,6 +737,27 @@ export function renderSiteHeader(active = '', bizConfig = {}) {
   window.addEventListener('cart-updated', updateGlobalCartCount);
   // Header "inteligente": se oculta al bajar y reaparece al subir
   initHeaderAutoHide();
+  initCurrencySwitch();
+}
+
+/**
+ * Delegacion del selector de moneda del header. Al cambiar guarda la
+ * preferencia en localStorage y dispara 'currency-change' para que home,
+ * detalle y carrito actualicen todos los precios mostrados.
+ */
+function initCurrencySwitch() {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.currency-switch__btn');
+    if (!btn) return;
+    const code = btn.dataset.currency;
+    try { localStorage.setItem('preferred_currency', code); } catch (_) { /* noop */ }
+    document.querySelectorAll('.currency-switch__btn').forEach((b) => {
+      const active = b.dataset.currency === code;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', String(active));
+    });
+    window.dispatchEvent(new CustomEvent('currency-change', { detail: { currency: code } }));
+  });
 }
 
 /**

@@ -2,7 +2,8 @@ import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGri
 import { addToCart, getCart } from '../carrito.js';
 import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { formatPrice, getUrlParam, formatPlainText } from '../utils.js';
-import { getBizConfig, getCurrency, getWhatsAppNumber } from '../config-negocio.js';
+import { getBizConfig, getWhatsAppNumber } from '../config-negocio.js';
+import { getPreferredCurrency, setCupRate } from '../utils.js';
 
 // El header se inyecta en init() con el nombre real del negocio
 initScrollTopButton();
@@ -224,8 +225,15 @@ window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 async function init() {
 try {
 bizConfig = await getBizConfig();
-currency = getCurrency(bizConfig);
+setCupRate(bizConfig.tasa_cup);
+// El comprador puede alternar USD/CUP; su eleccion persiste en localStorage
+currency = getPreferredCurrency();
 setCurrency(currency);
+window.addEventListener('currency-change', (e) => {
+currency = e.detail?.currency || currency;
+setCurrency(currency);
+if (product) render();
+});
 } catch (_) { /* defaults */ }
 // Header SIEMPRE visible (logo real + carrito + hamburguesa)
 renderSiteHeader('', bizConfig);
