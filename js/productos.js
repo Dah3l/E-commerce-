@@ -168,10 +168,16 @@ export async function getProducts(filters = {}) {
   //  - sin limit/offset -> catalogo completo paginado de 500 en 500 hasta
   //                        cubrir `count` (PostgREST truncaria a 1000 por peto).
   const PAGE_SIZE = 500;
-  const pageLimit = filters.limit || 24;
+  const pageLimit = filters.limit ?? 24;
 
   if (filters.offset != null) {
     query = query.range(filters.offset, filters.offset + (pageLimit - 1));
+  } else if (filters.limit === 0) {
+    // limit:0 -> solo se quiere el conteo exacto, sin traer filas
+    query = query.limit(0);
+    const { count: onlyCount, error: countError } = await query;
+    if (countError) throw countError;
+    return { data: [], count: onlyCount || 0 };
   } else if (filters.limit && filters.enOferta) {
     query = query.limit(Math.max(pageLimit * 4, 100));
   } else if (filters.limit) {

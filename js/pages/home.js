@@ -124,6 +124,26 @@ section.setAttribute('aria-hidden', String(!visible));
 
 let currentSearch = '';
 
+// Contador de resultados: refleja lo que se esta mostrando segun busqueda/filtros
+function updateResultsCount(shown, total, hasFilters) {
+const el = document.getElementById('results-count');
+if (!el) return;
+if (!total) {
+el.textContent = '';
+return;
+}
+const plural = (n) => n === 1 ? 'producto' : 'productos';
+if (currentSearch) {
+// Busqueda activa: cantidad de coincidencias
+el.innerHTML = `<strong>${shown}</strong> ${plural(shown)} para "${currentSearch}"`;
+} else if (hasFilters) {
+// Filtros activos (ofertas y/o categoria): mostrados vs. total del catalogo
+el.innerHTML = `<strong>${shown}</strong> ${plural(shown)}${shown !== total ? ` de ${total}` : ''} filtrado${shown === 1 ? '' : 's'}`;
+} else {
+el.innerHTML = `Mostrando <strong>${shown}</strong> ${plural(shown)}`;
+}
+}
+
 // Cargar todos los productos (respeta categoria, busqueda y filtros de orden/oferta)
 async function loadAllProducts() {
 const categoriaId = activeFilters.categoriaId;
@@ -131,7 +151,7 @@ showProductSkeletons('#all-products', 6);
 const { data: featured } = await getProducts({ destacados: true, limit: 6 });
 // SIN limit: antes traia solo 24 y desaparecian productos en "Todos"
 // cuando el catalogo crecia. Ahora se carga el catalogo completo filtrado.
-let { data: products } = await getProducts({
+let { data: products, count: filteredCount } = await getProducts({
 categoriaId,
 busqueda: currentSearch || undefined,
 orden: activeFilters.orden,
@@ -150,8 +170,21 @@ orden: activeFilters.orden,
 enOferta: activeFilters.enOferta || undefined
 });
 products = retry.data;
+filteredCount = retry.count;
 }
 }
+
+// Total del catalogo activo (sin filtros) para mensajes tipo "X de Y".
+// Se pide solo el conteo (limit:0 + count exacto) para no bajar productos.
+let totalCount = filteredCount || products.length;
+if (currentSearch || activeFilters.enOferta || categoriaId) {
+const { count } = await getProducts({ limit: 0 });
+if (count) totalCount = count;
+}
+// Con "solo ofertas" el recorte oferta < precio se hace en memoria, asi que
+// el count real mostrado es la longitud final tras filtrar.
+const shownCount = activeFilters.enOferta ? products.length : (filteredCount || products.length);
+updateResultsCount(shownCount, totalCount, Boolean(activeFilters.enOferta || categoriaId));
 
 // Combinar sin duplicados para que el botón de cualquier card funcione
 const merged = [...featured];
