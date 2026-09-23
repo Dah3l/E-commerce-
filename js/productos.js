@@ -262,7 +262,7 @@ export function renderProductCard(product) {
           alt="${escapeHtml(product.nombre)}"
           loading="lazy"
           class="product-card__image"
-          onerror="this.src='/assets/icons/placeholder.svg'"
+          onerror="this.onerror=null; this.src='/assets/icons/placeholder.svg'"
         >
         ${tieneOferta ? `
           <span class="product-card__badge product-card__badge--offer">

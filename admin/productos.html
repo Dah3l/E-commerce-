@@ -132,12 +132,12 @@
           <td><img src="${escapeHtml(imageUrl(p))}" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.src='/assets/icons/placeholder.svg'"></td>
           <td>${escapeHtml(p.nombre)}</td>
           <td>${escapeHtml(p.categorias?.nombre || '-')}</td>
-          <td>$${Number(p.precio).toFixed(2)}${p.precio_oferta ? ` <span style="color: var(--color-error); font-size: 12px;">($${Number(p.precio_oferta).toFixed(2)})</span>` : ''}</td>
+          <td class="admin-price">$${Number(p.precio).toFixed(2)}${p.precio_oferta ? `<del>$${Number(p.precio_oferta).toFixed(2)}</del>` : ''}</td>
           <td><span class="badge ${p.stock === 0 ? 'badge--danger' : p.stock < 10 ? 'badge--warning' : 'badge--success'}">${p.stock ?? '-'}</span></td>
           <td><span class="badge ${p.activo ? 'badge--success' : 'badge--danger'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
           <td class="admin-table__actions">
-            <button class="admin-table__btn admin-table__btn--edit" data-edit="${p.id}" title="Editar">✏️</button>
-            <button class="admin-table__btn admin-table__btn--delete" data-delete="${p.id}" title="Eliminar">🗑️</button>
+            <button class="admin-table__btn admin-table__btn--edit" data-edit="${p.id}" title="Editar" aria-label="Editar ${escapeHtml(p.nombre)}"><span class="admin-table__btn-icon">✏️</span><span class="admin-table__btn-text">Editar</span></button>
+            <button class="admin-table__btn admin-table__btn--delete" data-delete="${p.id}" title="Eliminar" aria-label="Eliminar ${escapeHtml(p.nombre)}"><span class="admin-table__btn-icon">🗑️</span><span class="admin-table__btn-text">Eliminar</span></button>
           </td>
         </tr>
       `).join('');
