@@ -4,6 +4,7 @@
  */
 
 import { formatPrice } from './utils.js';
+import { formatUsd, formatCup } from './moneda.js';
 
 const CART_STORAGE_KEY = 'shopping_cart';
 
@@ -209,7 +210,20 @@ export function getCartItems() {
 }
 
 /**
+ * Precio en ambas monedas para los mensajes de WhatsApp (ej: "$5.00 USD ≈ 3,500 CUP").
+ * Si el admin no configuro la tasa CUP, se muestra solo el precio en USD.
+ * @param {number} amount - importe en la moneda base (USD)
+ * @returns {string}
+ */
+function dualPrice(amount) {
+  const usd = formatUsd(amount);
+  const cup = formatCup(amount);
+  return cup ? `${usd} ≈ ${cup}` : usd;
+}
+
+/**
  * Genera un mensaje formateado para WhatsApp con el pedido
+ * (los precios se muestran tanto en USD como en CUP)
  * @param {string} whatsappNumber - Número de WhatsApp
  * @param {string} currency - Código de moneda
  * @returns {string} Mensaje formateado
@@ -226,12 +240,12 @@ export function generateWhatsAppMessage(whatsappNumber, currency) {
   
   items.forEach((item, index) => {
     message += `${index + 1}. ${item.nombre}\n`;
-    message += `   Cant: ${item.cantidad} x ${formatPrice(item.precio, currency)}\n`;
-    message += `   Subtotal: ${formatPrice(item.subtotal, currency)}\n\n`;
+    message += `   Cant: ${item.cantidad} x ${dualPrice(item.precio)}\n`;
+    message += `   Subtotal: ${dualPrice(item.subtotal)}\n\n`;
   });
   
   message += '─────────────────\n';
-  message += `*TOTAL: ${formatPrice(subtotal, currency)}*\n\n`;
+  message += `*TOTAL: ${dualPrice(subtotal)}*\n\n`;
   message += 'Gracias.';
   
   return message;
