@@ -1,3 +1,4 @@
+-- Migración para proyectos existentes: alter table config_negocio add column if not exists tasa_cup numeric;
 -- ============================================
 -- ESQUEMA DE BASE DE DATOS - SUPABASE
 -- Tienda Online de Comida y Aseo Personal
@@ -69,6 +70,8 @@ create table config_negocio (
   facebook text,
   instagram text,
   moneda text default 'USD',
+  -- cuantos CUP equivalen a 1 USD (configurado por el admin; null = sin conversion)
+  tasa_cup numeric,
   updated_at timestamptz default now()
 );
 

@@ -63,3 +63,9 @@ left join categorias c on c.id = p.categoria_id
 where p.activo = true
 group by c.nombre
 order by c.nombre;
+
+-- ============================================================
+-- Config: tasa de cambio USD -> CUP (editable luego desde el panel)
+-- 1 USD = 700 CUP. Con un valor > 0 aparece el selector USD/CUP en la tienda.
+-- ============================================================
+update config_negocio set tasa_cup = 700 where id = 1;

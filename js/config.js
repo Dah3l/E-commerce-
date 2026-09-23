@@ -25,6 +25,10 @@ export const LOGIN_BLOCK_TIME = 5 * 60 * 1000;
 // Moneda por defecto para formatear precios
 export const DEFAULT_CURRENCY = 'USD';
 
+// Moneda alternativa (ademas de la base USD) que puede elegir el comprador.
+// El admin configura cuantos CUP equivalen a 1 USD en el panel.
+export const ALT_CURRENCY = 'CUP';
+
 // Número de teléfono de WhatsApp para pedidos (sin + ni espacios)
 // Se puede sobrescribir desde la configuración del negocio
 export const WHATSAPP_NUMBER = '';
