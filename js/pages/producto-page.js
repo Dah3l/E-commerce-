@@ -1,10 +1,11 @@
     import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGrid, setCurrency } from '../js/productos.js';
     import { addToCart, getCartItems } from '../js/carrito.js';
-    import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter } from '../js/ui.js';
+    import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../js/ui.js';
     import { formatPrice, getUrlParam } from '../js/utils.js';
     import { getBizConfig, getCurrency, getWhatsAppNumber } from '../js/config-negocio.js';
 
-    renderSiteHeader(''); // inyecta header + menú móvil y activa la hamburguesa
+    renderSiteHeader('');
+    initScrollTopButton(); // inyecta header + menú móvil y activa la hamburguesa
 
     let product = null;
     let currency = 'USD';

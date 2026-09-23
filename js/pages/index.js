@@ -1,13 +1,14 @@
-    import { initMobileMenu, showToast, renderSiteFooter } from '../js/ui.js';
+    import { initMobileMenu, showToast, renderSiteFooter, renderSiteHeader, initScrollTopButton } from '../js/ui.js';
     import { getCategories } from '../js/categorias.js';
     import { getProducts, renderProductsGrid, showProductSkeletons } from '../js/productos.js';
     import { getCartCount, addToCart } from '../js/carrito.js';
     import { getBizConfig, getCurrency } from '../js/config-negocio.js';
 
-    // Inicializar menú móvil (solo si el header es estático en esta página;
-    // renderSiteHeader ya lo inicializa cuando inyecta el header por JS)
-    // Inicialización global con delegación: funciona con header estático o inyectado
+    // Header inyectado por JS (mismo que carrito/producto/contacto): incluye la
+    // hamburguesa funcional y el menú móvil sin Carrito/Categorías repetidos
+    renderSiteHeader('inicio');
     initMobileMenu();
+    initScrollTopButton();
 
     // Cache de productos cargados (para añadir al carrito sin otro fetch)
     let loadedProducts = [];
@@ -117,7 +118,17 @@
     async function loadAllProducts(categoriaId = null) {
       showProductSkeletons('#all-products', 6);
       const { data: featured } = await getProducts({ destacados: true, limit: 6 });
-      const { data: products } = await getProducts({ categoriaId, busqueda: currentSearch || undefined, limit: 24 });
+      let { data: products } = await getProducts({ categoriaId, busqueda: currentSearch || undefined, limit: 24 });
+
+      // Fallback: si la búsqueda tiene acentes y no trajo nada, reintentar sin acentos
+      // (cubre productos guardados como "arroz" cuando el usuario escribe "aróz", etc.)
+      if (currentSearch && products.length === 0) {
+        const desaccented = currentSearch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (desaccented !== currentSearch) {
+          const retry = await getProducts({ categoriaId, busqueda: desaccented, limit: 24 });
+          products = retry.data;
+        }
+      }
 
       // Combinar sin duplicados para que el botón de cualquier card funcione
       const merged = [...featured];

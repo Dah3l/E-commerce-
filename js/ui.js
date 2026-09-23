@@ -557,6 +557,14 @@ export function initMobileMenu() {
     }
     if (e.target.closest('.mobile-nav__item')) {
       toggleMobileMenu(false);
+      return;
+    }
+    // Clic fuera del menú (p. ej. en desktop, donde la barra queda visible): cierra
+    const mobileNav = document.querySelector('.mobile-nav');
+    if (mobileNav && mobileNav.classList.contains('mobile-nav--open')
+        && !e.target.closest('.mobile-nav')) {
+      toggleMobileMenu(false);
+      document.querySelectorAll('.hamburger-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
     }
   });
 
@@ -566,6 +574,46 @@ export function initMobileMenu() {
     if (mobileNav && mobileNav.classList.contains('mobile-nav--open')) {
       toggleMobileMenu(false);
       document.querySelectorAll('.hamburger-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    }
+  });
+}
+
+/**
+ * Inyecta (una sola vez) el botón flotante "volver arriba" en la esquina
+ * inferior derecha. Visible tras hacer scroll; sube suavemente al inicio.
+ */
+export function initScrollTopButton() {
+  if (document.getElementById('scrollTopBtn')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'scrollTopBtn';
+  btn.type = 'button';
+  btn.className = 'scroll-top-btn';
+  btn.setAttribute('aria-label', 'Volver arriba');
+  btn.textContent = '↑';
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      btn.classList.toggle('scroll-top-btn--visible', window.scrollY > 400);
+      ticking = false;
+    });
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // Tambien cierra el menu movil si alguien pulsa "Volver arriba" dentro del desplegable
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-scroll-top]')) {
+      toggleMobileMenu(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
 }
@@ -595,6 +643,8 @@ export function renderSiteHeader(active = '') {
   mount.dataset.rendered = '1';
   const link = (href, label, key) =>
     `<li><a href="${href}" class="desktop-nav__link${key === active ? ' active' : ''}">${label}</a></li>`;
+  // El menú desplegable NO incluye Carrito (siempre visible en el header)
+  // ni Categorías (lleva al mismo sitio que ya estás mirando).
   const mLink = (href, icon, label, key) =>
     `<a href="${href}" class="mobile-nav__item${key === active ? ' active' : ''}"><span class="mobile-nav__icon">${icon}</span><span>${label}</span></a>`;
   mount.innerHTML = `
@@ -621,9 +671,8 @@ export function renderSiteHeader(active = '') {
     </header>
     <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil">
       ${mLink('/', '🏠', 'Inicio', 'inicio')}
-      ${mLink('/#categorias', '📂', 'Categorías', 'categorias')}
-      ${mLink('/carrito.html', '🛒', 'Carrito', 'carrito')}
       ${mLink('/contacto.html', '📞', 'Contacto', 'contacto')}
+      <button type="button" class="mobile-nav__item mobile-nav__item--top" data-scroll-top aria-label="Volver arriba"><span class="mobile-nav__icon">⬆️</span><span>Volver arriba</span></button>
     </nav>`;
   // Asegurar que exista un overlay (útil en páginas con header estático como index)
   if (!document.querySelector('.nav-overlay')) {
@@ -636,8 +685,9 @@ export function renderSiteHeader(active = '') {
 }
 
 /**
- * Footer estandar para todas las paginas publicas (inyectado por JS)
- * Incluye enlaces de interés: navegación, categorías dinámicas y contacto.
+ * Footer estandar para todas las paginas publicas (inyectado por JS).
+ * Version ligera: una sola linea con nombre + enlaces utiles + copyright.
+ * (Las versiones multicolumna se veian demasiado cargadas.)
  */
 export async function renderSiteFooter(bizConfig = {}) {
   // Aceptar tanto un objeto config como un string (nombre del negocio)
@@ -653,51 +703,19 @@ export async function renderSiteFooter(bizConfig = {}) {
 
   const name = bizConfig.nombre_negocio || 'Mi Tienda Online';
   const year = new Date().getFullYear();
-  const tel = bizConfig.telefono || '';
-  const email = bizConfig.email || '';
-  const dir = bizConfig.direccion || '';
-  const phone = getWhatsAppNumberSafe(bizConfig);
-
-  // Categorías dinámicas (si están disponibles)
-  let catLinks = '';
-  try {
-    const { getCategories } = await import('./categorias.js');
-    const cats = await getCategories();
-    catLinks = (cats || []).slice(0, 6).map(c =>
-      `<li><a href="/?categoria=${encodeURIComponent(c.slug)}">${escapeHtml(c.nombre)}</a></li>`).join('');
-  } catch (_) { /* sin categorías */ }
 
   mount.innerHTML = `
-    <footer class="site-footer" role="contentinfo">
+    <footer class="site-footer site-footer--simple" role="contentinfo">
       <div class="container">
-        <div class="footer__content">
-          <div class="footer__section">
-            <h3>🛒 ${escapeHtml(name)}</h3>
-            <p>Tu tienda de confianza. Productos de calidad con entrega rápida.</p>
-          </div>
-          <div class="footer__section">
-            <h3>Enlaces</h3>
-            <ul>
-              <li><a href="/">Inicio</a></li>
-              <li><a href="/#categorias">Categorías</a></li>
-              <li><a href="/carrito.html">Carrito</a></li>
-              <li><a href="/contacto.html">Contacto</a></li>
-            </ul>
-          </div>
-          ${catLinks ? `
-          <div class="footer__section">
-            <h3>Categorías</h3>
-            <ul>${catLinks}</ul>
-          </div>` : ''}
-          <div class="footer__section">
-            <h3>Contacto</h3>
-            ${tel ? `<p>📞 <a href="tel:${escapeHtml(tel.replace(/\s/g, ''))}">${escapeHtml(tel)}</a></p>` : ''}
-            ${phone ? `<p>💬 <a href="https://wa.me/${escapeHtml(phone)}" target="_blank" rel="noopener">WhatsApp</a></p>` : ''}
-            ${email ? `<p>✉️ <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>` : ''}
-            ${dir ? `<p>📍 ${escapeHtml(dir)}</p>` : ''}
-          </div>
+        <div class="footer-simple">
+          <span class="footer-simple__brand">🛒 ${escapeHtml(name)}</span>
+          <nav class="footer-simple__links" aria-label="Enlaces del pie de página">
+            <a href="/">Inicio</a>
+            <a href="/carrito.html">Carrito</a>
+            <a href="/contacto.html">Contacto</a>
+          </nav>
+          <span class="footer-simple__copy">&copy; ${year}</span>
         </div>
-        <div class="footer__bottom"><p>&copy; ${year} ${escapeHtml(name)}</p></div>
       </div>
     </footer>`;
 }

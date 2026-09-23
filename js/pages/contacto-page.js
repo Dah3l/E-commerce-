@@ -1,4 +1,4 @@
-    import { initMobileMenu, showToast, escapeHtml, renderSiteHeader, renderSiteFooter } from '../js/ui.js';
+    import { initMobileMenu, showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../js/ui.js';
     import { getBizConfig, getWhatsAppNumber } from '../js/config-negocio.js';
 
     let bizConfig = {};
@@ -76,6 +76,7 @@
 
     async function init() {
       renderSiteHeader('contacto');
+      initScrollTopButton();
       initMobileMenu();
       await loadContactInfo();
       renderSiteFooter(bizConfig);
