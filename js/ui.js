@@ -653,8 +653,14 @@ export function renderSiteHeader(active = '') {
     mount.id = 'site-header-mount';
     document.body.insertBefore(mount, document.body.firstChild);
   }
-  if (mount.dataset.rendered) return;
-  mount.dataset.rendered = '1';
+  // Renderizar SIEMPRE que el mount este vacio (p. ej. el marcador
+  // <div id="site-header-mount"></div> en el HTML). Antes un guard de
+  // "ya renderizado" hacia `return` y la pagina quedaba SIN header: sin
+  // navegacion, sin hamburguesa y —en index— sin nada visible salvo el hero.
+  if (mount.firstElementChild) {
+    initMobileMenu();
+    return;
+  }
   const link = (href, label, key) =>
     `<li><a href="${href}" class="desktop-nav__link${key === active ? ' active' : ''}">${label}</a></li>`;
   // El menú desplegable NO incluye Carrito (siempre visible en el header)

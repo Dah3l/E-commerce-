@@ -172,8 +172,20 @@
       });
     }
 
+    // Muestra un error visible en ambos grids (para que la tienda nunca parezca
+    // "vacia" sin explicacion si algo falla al cargar)
+    function showLoadError(msg) {
+      ['#featured-products', '#all-products'].forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el && !el.children.length) {
+          el.innerHTML = `<p style="grid-column: 1 / -1; text-align:center; color:#B91C1C; padding: 24px;">${msg}</p>`;
+        }
+      });
+    }
+
     // Inicializar página
     async function init() {
+      try {
       await applyBizConfig();
       initSearch();
       await loadCategories();
@@ -195,6 +207,11 @@
 
       if (catSlug) {
         document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
+      }
+      } catch (err) {
+        console.error('Error al inicializar la tienda:', err);
+        showToast('Hubo un problema al cargar la tienda. Recarga la página.', 'error', 6000);
+        showLoadError('No se pudieron cargar los productos. <br><button class="btn btn--primary" onclick="location.reload()" style="margin-top:12px;">Reintentar</button>');
       }
     }
 
