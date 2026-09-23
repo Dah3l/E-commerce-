@@ -535,27 +535,37 @@ export function toggleMobileMenu(show) {
  * Inicializa los listeners para el menú móvil
  */
 export function initMobileMenu() {
-  const hamburger = document.querySelector('.hamburger-btn');
-  const overlay = document.querySelector('.nav-overlay');
-  const mobileNav = document.querySelector('.mobile-nav');
-  
-  if (!hamburger || !mobileNav) return;
-  
-  // Toggle menú
-  hamburger.addEventListener('click', () => {
-    const isOpen = mobileNav.classList.contains('mobile-nav--open');
-    toggleMobileMenu(!isOpen);
-  });
-  
-  // Cerrar al hacer click en overlay
-  overlay?.addEventListener('click', () => {
-    toggleMobileMenu(false);
-  });
-  
-  // Cerrar con ESC
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && mobileNav.classList.contains('mobile-nav--open')) {
+  // Delegación sobre document: funciona con headers inyectados dinámicamente
+  // y nunca duplica listeners aunque se llame varias veces.
+  if (window.__mobileMenuInit) return;
+  window.__mobileMenuInit = true;
+
+  document.addEventListener('click', (e) => {
+    const hamburger = e.target.closest('.hamburger-btn');
+    if (hamburger) {
+      const mobileNav = document.querySelector('.mobile-nav');
+      if (!mobileNav) return;
+      const willOpen = !mobileNav.classList.contains('mobile-nav--open');
+      toggleMobileMenu(willOpen);
+      hamburger.setAttribute('aria-expanded', String(willOpen));
+      return;
+    }
+    if (e.target.closest('.nav-overlay')) {
       toggleMobileMenu(false);
+      document.querySelectorAll('.hamburger-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+      return;
+    }
+    if (e.target.closest('.mobile-nav__item')) {
+      toggleMobileMenu(false);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const mobileNav = document.querySelector('.mobile-nav');
+    if (mobileNav && mobileNav.classList.contains('mobile-nav--open')) {
+      toggleMobileMenu(false);
+      document.querySelectorAll('.hamburger-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
     }
   });
 }
@@ -609,13 +619,18 @@ export function renderSiteHeader(active = '') {
         </div>
       </div>
     </header>
-    <div class="nav-overlay"></div>
     <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil">
       ${mLink('/', '🏠', 'Inicio', 'inicio')}
       ${mLink('/#categorias', '📂', 'Categorías', 'categorias')}
       ${mLink('/carrito.html', '🛒', 'Carrito', 'carrito')}
       ${mLink('/contacto.html', '📞', 'Contacto', 'contacto')}
     </nav>`;
+  // Asegurar que exista un overlay (útil en páginas con header estático como index)
+  if (!document.querySelector('.nav-overlay')) {
+    const ov = document.createElement('div');
+    ov.className = 'nav-overlay';
+    document.body.insertBefore(ov, mount.nextSibling);
+  }
   // Inicializar el menú hamburguesa sobre los elementos recién inyectados
   initMobileMenu();
 }
@@ -625,6 +640,8 @@ export function renderSiteHeader(active = '') {
  * Incluye enlaces de interés: navegación, categorías dinámicas y contacto.
  */
 export async function renderSiteFooter(bizConfig = {}) {
+  // Aceptar tanto un objeto config como un string (nombre del negocio)
+  if (typeof bizConfig === 'string') bizConfig = { nombre_negocio: bizConfig };
   let mount = document.getElementById('site-footer-mount');
   if (!mount) {
     mount = document.createElement('div');

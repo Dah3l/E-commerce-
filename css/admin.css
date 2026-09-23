@@ -232,14 +232,51 @@
   gap: var(--spacing-2);
 }
 
+.admin-table tbody tr:nth-child(even) {
+  background-color: var(--color-gray-50);
+}
+
+.admin-table tbody tr:hover {
+  background-color: #EEF2FF;
+}
+
+.admin-table td {
+  vertical-align: middle;
+}
+
+/* Celdas de texto largo (descripción): truncar para no romper separadores */
+.admin-table .cell-truncate {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-price del {
+  display: block;
+  color: var(--color-error);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
 .admin-table__btn {
-  padding: var(--spacing-1) var(--spacing-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--spacing-1) var(--spacing-3);
   font-size: var(--font-size-sm);
   background: transparent;
-  border: none;
+  border: 1px solid currentColor;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.admin-table__btn-icon {
+  font-size: var(--font-size-base);
+  line-height: 1;
 }
 
 .admin-table__btn--edit {
@@ -249,6 +286,7 @@
 .admin-table__btn--edit:hover {
   background-color: var(--color-primary);
   color: var(--color-white);
+  border-color: var(--color-primary);
 }
 
 .admin-table__btn--delete {
@@ -258,6 +296,7 @@
 .admin-table__btn--delete:hover {
   background-color: var(--color-error);
   color: var(--color-white);
+  border-color: var(--color-error);
 }
 
 /* Status badges en tablas */

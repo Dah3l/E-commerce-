@@ -82,8 +82,8 @@
         <td>${c.orden ?? '-'}</td>
         <td><span class="badge ${c.activa ? 'badge--success' : 'badge--danger'}">${c.activa ? 'Activa' : 'Inactiva'}</span></td>
         <td class="admin-table__actions">
-          <button class="admin-table__btn admin-table__btn--edit" data-edit="${c.id}" title="Editar">✏️</button>
-          <button class="admin-table__btn admin-table__btn--delete" data-delete="${c.id}" title="Eliminar">🗑️</button>
+          <button class="admin-table__btn admin-table__btn--edit" data-edit="${c.id}" title="Editar" aria-label="Editar"><span class="admin-table__btn-icon">✏️</span><span class="admin-table__btn-text">Editar</span></button>
+          <button class="admin-table__btn admin-table__btn--delete" data-delete="${c.id}" title="Eliminar" aria-label="Eliminar"><span class="admin-table__btn-icon">🗑️</span><span class="admin-table__btn-text">Eliminar</span></button>
         </td>
       </tr>`).join('');
     }
