@@ -34,8 +34,15 @@ if (!product) {
 showToast('No se pudo encontrar el producto', 'error');
 return;
 }
-if (addToCart(product)) {
+const res = addToCart(product, 1);
+if (res.ok && res.partial) {
+showToast(`Solo hay ${res.available} unidad${res.available === 1 ? '' : 'es'} de "${product.nombre}" en stock`, 'warning');
+} else if (res.ok) {
 showToast(`"${product.nombre}" añadido al carrito`, 'success');
+} else if (res.reason === 'max_reached') {
+showToast(`Ya tienes todas las unidades disponibles de "${product.nombre}" en el carrito`, 'warning');
+} else if (res.reason === 'out_of_stock') {
+showToast(`"${product.nombre}" está agotado`, 'error');
 }
 });
 

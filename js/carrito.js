@@ -8,6 +8,22 @@ import { formatPrice } from './utils.js';
 const CART_STORAGE_KEY = 'shopping_cart';
 
 /**
+ * Resultado de una operación sobre el carrito que puede ser rechazada
+ * @typedef {{ok: boolean, reason?: string, added?: number, quantity?: number}} CartResult
+ */
+
+/**
+ * Devuelve la cantidad actual de un producto en el carrito (0 si no está)
+ * @param {Array} cart - Carrito
+ * @param {string} productId - ID del producto
+ * @returns {number}
+ */
+function getQtyInCart(cart, productId) {
+  const item = cart.find(i => String(i.producto_id) === String(productId));
+  return item ? (parseInt(item.cantidad, 10) || 0) : 0;
+}
+
+/**
  * Obtiene el carrito actual desde localStorage
  * @returns {Array<{producto_id: string, nombre: string, precio: number, cantidad: number, imagen_url: string}>}
  */
@@ -27,40 +43,68 @@ function saveCart(cart) {
 }
 
 /**
- * Añade un producto al carrito
- * @param {Object} product - Producto a añadir
+ * Añade un producto al carrito, respetando el stock disponible.
+ * Nunca permite superar la cantidad en stock: si se pide más de lo que
+ * queda, añade solo lo disponible y lo indica como "parcial".
+ * @param {Object} product - Producto a añadir (con `stock`: número o null)
  * @param {string} product.id - ID del producto
  * @param {string} product.nombre - Nombre del producto
  * @param {number} product.precio - Precio del producto
  * @param {string} product.imagen_url - URL de la imagen
  * @param {number} quantity - Cantidad a añadir (default: 1)
- * @returns {boolean} True si se añadió exitosamente
+ * @returns {{ok: boolean, reason?: string, added?: number, partial?: boolean, available?: number}}
+ *   ok=true: añadido (added = cantidad añadida; partial=true si se recortó por stock).
+ *   ok=false: no se añadió nada. reason: 'invalid' | 'out_of_stock' | 'max_reached'.
  */
 export function addToCart(product, quantity = 1) {
   if (!product || !product.id) {
     console.error('Producto inválido');
-    return false;
+    return { ok: false, reason: 'invalid' };
   }
-  
+
+  const qty = Math.max(1, parseInt(quantity, 10) || 1);
   const cart = getCart();
-  const existingIndex = cart.findIndex(item => item.producto_id === product.id);
-  
+  const currentQty = getQtyInCart(cart, product.id);
+
+  // stock es un número cuando hay control de stock, o null/undefined si no se gestiona
+  const hasStockControl = product.stock !== null && product.stock !== undefined && Number.isFinite(Number(product.stock));
+
+  if (hasStockControl) {
+    const stock = Math.max(0, parseInt(product.stock, 10));
+    if (stock <= 0) {
+      return { ok: false, reason: 'out_of_stock', available: 0 };
+    }
+    const remaining = stock - currentQty;
+    if (remaining <= 0) {
+      return { ok: false, reason: 'max_reached', available: stock };
+    }
+    if (qty > remaining) {
+      // Añadir solo lo que queda disponible en lugar de rechazar todo
+      const existingIndex = cart.findIndex(item => String(item.producto_id) === String(product.id));
+      cart[existingIndex].cantidad += remaining;
+      saveCart(cart);
+      return { ok: true, partial: true, added: remaining, available: stock };
+    }
+  }
+
+  const existingIndex = cart.findIndex(item => String(item.producto_id) === String(product.id));
+
   if (existingIndex >= 0) {
     // El producto ya existe, aumentar cantidad
-    cart[existingIndex].cantidad += quantity;
+    cart[existingIndex].cantidad += qty;
   } else {
     // Producto nuevo en el carrito
     cart.push({
       producto_id: product.id,
       nombre: product.nombre,
       precio: product.precio_oferta || product.precio,
-      cantidad: quantity,
+      cantidad: qty,
       imagen_url: product.imagen_url
     });
   }
-  
+
   saveCart(cart);
-  return true;
+  return { ok: true, added: qty, available: hasStockControl ? parseInt(product.stock, 10) : null };
 }
 
 /**
@@ -81,24 +125,41 @@ export function removeFromCart(productId) {
 }
 
 /**
- * Actualiza la cantidad de un producto en el carrito
+ * Actualiza la cantidad de un producto en el carrito.
+ * Si se pasa `maxStock` (número), la cantidad se limita a ese máximo
+ * para no permitir superar el stock disponible.
  * @param {string} productId - ID del producto
  * @param {number} quantity - Nueva cantidad (0 o menos elimina el producto)
- * @returns {boolean} True si se actualizó
+ * @param {number|null} maxStock - Stock máximo permitido (opcional)
+ * @returns {{ok: boolean, clamped?: boolean, quantity?: number}} Resultado
  */
-export function updateQuantity(productId, quantity) {
+export function updateQuantity(productId, quantity, maxStock = null) {
   const cart = getCart();
-  const item = cart.find(item => item.producto_id === productId);
-  
-  if (!item) return false;
-  
-  if (quantity <= 0) {
-    return removeFromCart(productId);
+  const item = cart.find(i => String(i.producto_id) === String(productId));
+
+  if (!item) return { ok: false };
+
+  let qty = parseInt(quantity, 10);
+  if (!Number.isFinite(qty)) qty = 1;
+
+  if (qty <= 0) {
+    removeFromCart(productId);
+    return { ok: true, quantity: 0 };
   }
-  
-  item.cantidad = quantity;
+
+  let clamped = false;
+  const rawMax = Number(maxStock);
+  if (maxStock !== null && maxStock !== undefined && Number.isFinite(rawMax)) {
+    const max = Math.max(1, parseInt(rawMax, 10));
+    if (qty > max) {
+      qty = max;
+      clamped = true;
+    }
+  }
+
+  item.cantidad = qty;
   saveCart(cart);
-  return true;
+  return { ok: true, clamped, quantity: qty };
 }
 
 /**

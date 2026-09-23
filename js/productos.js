@@ -241,15 +241,11 @@ export function renderProductCard(product) {
           class="product-card__image"
           onerror="this.onerror=null; this.src='./assets/icons/placeholder.svg'"
         >
-        ${tieneOferta ? `
-          <span class="product-card__badge product-card__badge--offer">
-            OFERTA
-          </span>
-        ` : ''}
-        ${product.destacado ? `
-          <span class="product-card__badge product-card__badge--featured">
-            ⭐
-          </span>
+        ${(tieneOferta || product.destacado) ? `
+          <div class="product-card__badges">
+            ${tieneOferta ? `<span class="product-card__badge product-card__badge--offer">OFERTA</span>` : ''}
+            ${product.destacado ? `<span class="product-card__badge product-card__badge--featured">⭐ Destacado</span>` : ''}
+          </div>
         ` : ''}
         ${product.stock === 0 ? `
           <span class="product-card__overlay">

@@ -97,6 +97,19 @@
   margin-top: var(--spacing-2);
 }
 
+/* Nota de stock por item en el carrito */
+.cart-item__stock-note {
+  width: 100%;
+  margin: var(--spacing-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+.quantity-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .cart-item__remove {
   background: transparent;
   border: none;
