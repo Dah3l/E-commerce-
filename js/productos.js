@@ -113,9 +113,14 @@ export async function getProducts(filters = {}) {
     query = query.eq('destacado', true);
   }
 
-  // Filtro "en oferta": solo productos con precio de oferta valido (>0 y menor al precio normal)
+  // Filtro "en oferta": solo productos con precio de oferta valido.
+  // OJO: antes usabamos .lt('precio_oferta', 'precio'), pero PostgREST intenta
+  // parsear "precio" como numero y devuelve error 22P02 (invalid input syntax
+  // for type numeric), por eso el toggle no mostraba nada. Como no se pueden
+  // comparar dos columnas en la query, aqui solo pedimos ofertas > 0 y la
+  // comprobacion final (oferta < precio normal) se hace en memoria abajo.
   if (filters.enOferta) {
-    query = query.gt('precio_oferta', 0).lt('precio_oferta', 'precio');
+    query = query.gt('precio_oferta', 0);
   }
   
   if (filters.busqueda) {
@@ -150,13 +155,20 @@ export async function getProducts(filters = {}) {
                  .order('created_at', { ascending: false });
   }
   
-  // Aplicar límite y offset
-  if (filters.limit) {
+  // Aplicar límite y offset.
+  // NOTA: con el filtro "en oferta" no conviene limitar en la BD, porque el
+  // recorte final (oferta < precio) se hace en memoria; si limitaramos aqui,
+  // podriamos quedarnos sin ofertas validas tras filtrar. Se trae una pagina
+  // mas grande y se limita al final.
+  const pageLimit = filters.limit || 24;
+  if (filters.limit && !filters.enOferta) {
     query = query.limit(filters.limit);
+  } else if (filters.limit && filters.enOferta) {
+    query = query.limit(Math.max(pageLimit * 4, 100));
   }
-  
+
   if (filters.offset) {
-    query = query.range(filters.offset, filters.offset + (filters.limit - 1));
+    query = query.range(filters.offset, filters.offset + (pageLimit - 1));
   }
   
   try {
@@ -164,13 +176,24 @@ export async function getProducts(filters = {}) {
     
     if (error) throw error;
     
-    const products = (data || []).map(normalizeProduct);
+    let products = (data || []).map(normalizeProduct);
+
+    // Filtro "en oferta" (2a parte): la oferta solo cuenta si es menor al
+    // precio normal. Se hace en memoria porque PostgREST no compara columnas.
+    if (filters.enOferta) {
+      products = products.filter(p => p.precio_oferta && p.precio_oferta < p.precio);
+    }
 
     // Reordenar en memoria por precio efectivo (oferta si existe, si no precio normal)
     if (orden === 'precio-asc' || orden === 'precio-desc') {
       const dir = orden === 'precio-asc' ? 1 : -1;
       const effective = (p) => (p.precio_oferta && p.precio_oferta < p.precio ? p.precio_oferta : p.precio);
       products.sort((a, b) => (effective(a) - effective(b)) * dir);
+    }
+
+    // Si el filtro "en oferta" trajó una pagina ampliada, recortar al limite real
+    if (filters.enOferta && filters.limit && products.length > filters.limit) {
+      products = products.slice(0, filters.limit);
     }
 
     return { data: products, count: count || 0 };
