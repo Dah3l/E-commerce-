@@ -617,10 +617,15 @@ export function initScrollTopButton() {
     ticking = true;
     requestAnimationFrame(() => {
       btn.classList.toggle('scroll-top-btn--visible', window.scrollY > 400);
+      // Al llegar al final de la pagina, ocultar el boton para que no
+      // estorbe al pulsar los enlaces del footer (p. ej. "Contacto")
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
+      document.body.classList.toggle('at-page-bottom', atBottom);
       ticking = false;
     });
   };
   window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
   onScroll();
 
   // Tambien cierra el menu movil si alguien pulsa "Volver arriba" dentro del desplegable
@@ -644,15 +649,18 @@ export function scrollToElement(selector) {
 }
 
 /**
- * Header estandar para todas las paginas publicas (inyectado por JS)
+ * Header estandar para todas las paginas publicas (inyectado por JS).
+ * Recibe el nombre del negocio para mostrar logo + contador del carrito
+ * SIEMPRE visibles en cualquier vista (header sticky).
  */
-export function renderSiteHeader(active = '') {
+export function renderSiteHeader(active = '', bizConfig = {}) {
   let mount = document.getElementById('site-header-mount');
   if (!mount) {
     mount = document.createElement('div');
     mount.id = 'site-header-mount';
     document.body.insertBefore(mount, document.body.firstChild);
   }
+  const storeName = bizConfig.nombre_negocio || 'Mi Tienda';
   // Renderizar SIEMPRE que el mount este vacio (p. ej. el marcador
   // <div id="site-header-mount"></div> en el HTML). Antes un guard de
   // "ya renderizado" hacia `return` y la pagina quedaba SIN header: sin
@@ -671,14 +679,13 @@ export function renderSiteHeader(active = '') {
     <header class="site-header" role="banner">
       <div class="container">
         <div class="header-main">
-          <a href="./" class="header__logo">🛒 Mi Tienda</a>
+          <a href="./" class="header__logo">🛒 ${escapeHtml(storeName)}</a>
           <button class="hamburger-btn" aria-label="Menú" aria-expanded="false" aria-controls="mobile-nav">
             <span></span><span></span><span></span>
           </button>
           <nav class="desktop-nav" aria-label="Navegación principal">
             <ul class="desktop-nav__list">
               ${link('./' ,'Inicio', 'inicio')}
-              ${link('./#categorias', 'Categorías', 'categorias')}
               ${link('./contacto.html', 'Contacto', 'contacto')}
             </ul>
           </nav>
@@ -702,6 +709,28 @@ export function renderSiteHeader(active = '') {
   }
   // Inicializar el menú hamburguesa sobre los elementos recién inyectados
   initMobileMenu();
+  // Mantener el contador del carrito sincronizado en todas las vistas
+  updateGlobalCartCount();
+  window.addEventListener('cart-updated', updateGlobalCartCount);
+}
+
+/**
+ * Actualiza TODOS los contadores .cart-count de la página y refleja el
+ * total real de artículos (suma de cantidades). Llamado automáticamente
+ * por renderSiteHeader y ante el evento 'cart-updated'.
+ */
+export function updateGlobalCartCount() {
+  let count = 0;
+  try {
+    const items = JSON.parse(localStorage.getItem('shopping_cart') || '[]');
+    count = Array.isArray(items)
+      ? items.reduce((t, i) => t + (parseInt(i.cantidad, 10) || 1), 0)
+      : 0;
+  } catch (_) { /* almacenamiento corrupto: dejar en 0 */ }
+  document.querySelectorAll('.cart-count').forEach(el => {
+    el.textContent = count;
+    el.style.display = count > 0 ? 'flex' : 'none';
+  });
 }
 
 /**

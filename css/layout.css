@@ -35,13 +35,10 @@
   color: var(--color-primary-dark);
 }
 
-/* Botón hamburguesa: SOLO en desktop (abre un pequeño desplegable).
-   En móvil/tablet se oculta: allí la barra inferior cumple la navegación. */
-@media (max-width: 1023.98px) {
-  .hamburger-btn {
-    display: none !important;
-  }
-}
+/* Botón hamburguesa: visible en TODAS las vistas.
+   - Desktop: abre un pequeño desplegable bajo el header.
+   - Movil/tablet: abre la barra de navegacion inferior (que ahora es
+     overlay, no ocupa espacio fijo, para que el header quede completo). */
 
 .hamburger-btn {
   display: flex;
@@ -142,7 +139,7 @@
 }
 
 /* ============================================
-   MENÚ MÓVIL
+   MENÚ MÓVIL (barra inferior tipo overlay)
    ============================================ */
 .mobile-nav {
   position: fixed;
@@ -158,6 +155,12 @@
   padding-bottom: max(var(--spacing-2), env(safe-area-inset-bottom));
   transform: translateY(100%);
   transition: transform var(--transition-base);
+}
+
+/* Sombra inferior al header: mantiene el carrito/hamburguesa legibles
+   cuando el contenido pasa por debajo (sticky en todas las vistas). */
+.site-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .mobile-nav--open {
@@ -523,11 +526,20 @@
   background-color: var(--color-primary-dark);
 }
 
-/* En pantallas pequeñas con la barra de navegación abierta, sube el botón para no taparla */
+/* En pantallas pequeñas: si el menu esta abierto, sube el boton para no taparlo;
+   ademas se oculta al llegar al final de la pagina para que nunca tape los
+   enlaces del footer (p. ej. "Contacto") */
 @media (max-width: 767.98px) {
   .mobile-nav--open ~ .scroll-top-btn,
   body:has(.mobile-nav--open) .scroll-top-btn {
     bottom: 90px;
+  }
+
+  body.at-page-bottom .scroll-top-btn {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    pointer-events: none;
   }
 }
 

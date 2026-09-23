@@ -1,30 +1,24 @@
 import { getCartItems, addToCart, removeFromCart, updateQuantity, getCartSubtotal, clearCart } from '../carrito.js';
 import { formatPrice, escapeHtml } from '../utils.js';
-import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../ui.js';
+import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { getBizConfig, getWhatsAppNumber, getCurrency } from '../config-negocio.js';
 import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from '../productos.js';
 
-renderSiteHeader('carrito');
+// El header se inyecta en init() con el nombre real del negocio
 initScrollTopButton();
 let currency = 'USD';
 let suggestProducts = [];
 const container = document.getElementById('cartContent');
 const suggestEl = document.getElementById('cartSuggestSection');
 
-function updateCounter() {
-const count = getCartItems().reduce((t, i) => t + (parseInt(i.cantidad, 10) || 0), 0);
-document.querySelectorAll('.cart-count').forEach(el => {
-el.textContent = count;
-el.style.display = count > 0 ? 'flex' : 'none';
-});
-}
+// (El contador del carrito lo mantiene sincronizado ui.js: updateGlobalCartCount)
 
 function renderCart() {
 const items = getCartItems();
 const subtotal = getCartSubtotal();
 
 if (items.length === 0) {
-container.innerHTML = '<div class="cart-empty"><div class="cart-empty__icon">🛒</div><h2 class="cart-empty__title">Tu carrito está vacío</h2><p class="cart-empty__text">Agrega productos para comenzar tu compra</p><a href="/" class="btn btn--primary">Ver Productos</a></div>';
+container.innerHTML = '<div class="cart-empty"><div class="cart-empty__icon">🛒</div><h2 class="cart-empty__title">Tu carrito está vacío</h2><p class="cart-empty__text">Agrega productos para comenzar tu compra</p><a href="./" class="btn btn--primary">Ver Productos</a></div>';
 return;
 }
 
@@ -67,7 +61,7 @@ if (item) {
 const current = parseInt(item.cantidad, 10) || 1;
 updateQuantity(item.producto_id, current + 1);
 renderCart();
-updateCounter();
+updateGlobalCartCount();
 }
 return;
 }
@@ -76,7 +70,7 @@ const item = getCartItems().find(i => String(i.producto_id) === dec.dataset.dec)
 if (item) {
 updateQuantity(item.producto_id, (parseInt(item.cantidad, 10) || 1) - 1);
 renderCart();
-updateCounter();
+updateGlobalCartCount();
 }
 return;
 }
@@ -156,14 +150,14 @@ window.addEventListener('storage', (e) => {
 if (e.key !== 'shopping_cart') return;
 lastCartJson = e.newValue || '[]';
 renderCart();
-updateCounter();
+updateGlobalCartCount();
 });
 window.addEventListener('cart-updated', () => {
 const nowJson = localStorage.getItem('shopping_cart') || '[]';
 if (nowJson === lastCartJson) return; // ya renderizado o sin cambios reales
 lastCartJson = nowJson;
 renderCart();
-updateCounter();
+updateGlobalCartCount();
 });
 
 async function loadSuggestions() {
@@ -184,12 +178,11 @@ config = await getBizConfig();
 currency = getCurrency(config);
 setCurrency(currency);
 } catch (_) { /* usar USD */ }
+// Header SIEMPRE visible (logo real + carrito + hamburguesa)
+renderSiteHeader('carrito', config);
 renderSiteFooter(config);
-if (config.nombre_negocio) {
-document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${config.nombre_negocio}`; });
-}
 renderCart();
-updateCounter();
+updateGlobalCartCount();
 loadSuggestions();
 }
 

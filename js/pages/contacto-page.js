@@ -1,4 +1,4 @@
-import { initMobileMenu, showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../ui.js';
+import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../ui.js';
 import { getBizConfig, getWhatsAppNumber } from '../config-negocio.js';
 
 let bizConfig = {};
@@ -75,14 +75,11 @@ e.target.reset();
 });
 
 async function init() {
-renderSiteHeader('contacto');
 initScrollTopButton();
-initMobileMenu();
 await loadContactInfo();
+// Header SIEMPRE visible (logo real + carrito + hamburguesa)
+renderSiteHeader('contacto', bizConfig);
 renderSiteFooter(bizConfig);
-if (bizConfig.nombre_negocio) {
-document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${bizConfig.nombre_negocio}`; });
-}
 }
 
 if (document.readyState === 'loading') {
