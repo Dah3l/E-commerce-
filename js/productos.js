@@ -9,7 +9,7 @@ import { formatPrice, slugify } from './utils.js';
 // Moneda actual (se puede cambiar con setCurrency, p.ej. desde config_negocio)
 let currentCurrency = null;
 export function setCurrency(currency) {
-  currentCurrency = currency || null;
+  if (currency) currentCurrency = currency;
 }
 
 /**

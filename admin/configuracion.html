@@ -42,8 +42,7 @@
             <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="email"></div>
             <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-input" id="direccion"></div>
             <div class="form-group"><label class="form-label">Horario</label><input type="text" class="form-input" id="horario"></div>
-            <div class="form-group"><label class="form-label">Moneda base (precios de los productos)</label><input type="text" class="form-input" id="moneda" placeholder="USD" maxlength="3" style="text-transform:uppercase"><small class="form-hint" style="display:block;color:#6B7280;font-size:12px;margin-top:4px;">Código ISO de 3 letras. Los precios del catálogo se guardan en esta moneda (recomendado: USD).</small></div>
-            <div class="form-group"><label class="form-label">Tasa de cambio: CUP por 1 USD</label><input type="number" class="form-input" id="tasa_cup" placeholder="700" min="0" step="any"><small class="form-hint" style="display:block;color:#6B7280;font-size:12px;margin-top:4px;">Ejemplo: 700 significa que 1 USD = 700 CUP. Al escribir un valor válido aparece en la tienda un selector para que el comprador vea los precios en USD o CUP. Déjalo vacío para ocultar el selector y mostrar solo la moneda base.</small></div>
+            <div class="form-group"><label class="form-label">Moneda</label><input type="text" class="form-input" id="moneda" placeholder="USD" maxlength="3" style="text-transform:uppercase"><small class="form-hint" style="display:block;color:#6B7280;font-size:12px;margin-top:4px;">Código ISO de 3 letras: USD, COP, MXN, ARS, PEN, EUR...</small></div>
             <button type="submit" class="btn btn--primary">Guardar Configuración</button>
           </form>
         </div>
@@ -86,7 +85,6 @@
         document.getElementById('direccion').value = data.direccion || '';
         document.getElementById('horario').value = data.horario || '';
         document.getElementById('moneda').value = data.moneda || 'USD';
-        document.getElementById('tasa_cup').value = data.tasa_cup ?? '';
       }
     }
 
@@ -107,16 +105,6 @@
             throw new Error('moneda_invalida');
           }
           return m || 'USD';
-        })(),
-        tasa_cup: (() => {
-          const t = document.getElementById('tasa_cup').value.trim();
-          if (!t) return null; // sin tasa: oculta el selector USD/CUP en la tienda
-          const n = parseFloat(t);
-          if (!Number.isFinite(n) || n <= 0) {
-            showToast('La tasa debe ser un número mayor que 0 (ej: 700)', 'error');
-            throw new Error('tasa_invalida');
-          }
-          return n;
         })(),
         updated_at: new Date().toISOString()
       };
