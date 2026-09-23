@@ -9,7 +9,8 @@ return parseInt(p.stock, 10);
 }
 import { formatPrice, escapeHtml } from '../utils.js';
 import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
-import { getBizConfig, getWhatsAppNumber, getCurrency } from '../config-negocio.js';
+import { getBizConfig, getWhatsAppNumber, getCurrency, getCupRate } from '../config-negocio.js';
+import { setBaseCurrency, setCupRate, refreshPriceElements } from '../moneda.js';
 import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from '../productos.js';
 
 // El header se inyecta en init() con el nombre real del negocio
@@ -41,7 +42,7 @@ return `
 <img src="${escapeHtml(item.imagen_url || './assets/icons/placeholder.svg')}" alt="${escapeHtml(item.nombre)}" class="cart-item__image" onerror="this.src='./assets/icons/placeholder.svg'">
 <div class="cart-item__info">
 <h3 class="cart-item__name">${escapeHtml(item.nombre)}</h3>
-<p class="cart-item__price">${formatPrice(item.precio, currency)}</p>
+<p class="cart-item__price" data-price-usd="${item.precio}">${formatPrice(item.precio, currency)}</p>
 <div class="cart-item__actions">
 <div class="quantity-selector">
 <button class="quantity-btn" data-dec="${escapeHtml(item.producto_id)}" aria-label="Restar uno">−</button>
@@ -56,8 +57,8 @@ ${itemWarning}
 }).join('')}</div>
 <div class="cart-summary">
 <h2 class="cart-summary__title">Resumen</h2>
-<div class="cart-summary__row"><span>Subtotal</span><span>${formatPrice(subtotal, currency)}</span></div>
-<div class="cart-summary__row cart-summary__row--total"><span>Total</span><span>${formatPrice(subtotal, currency)}</span></div>
+<div class="cart-summary__row"><span>Subtotal</span><span data-price-usd="${subtotal}">${formatPrice(subtotal, currency)}</span></div>
+<div class="cart-summary__row cart-summary__row--total"><span>Total</span><span data-price-usd="${subtotal}">${formatPrice(subtotal, currency)}</span></div>
 <button class="btn btn--primary btn--lg cart-summary__btn" id="btnCheckout">✅ Finalizar por WhatsApp</button>
 <button class="btn btn--secondary btn--block" id="btnClearCart">🗑️ Vaciar Carrito</button>
 </div>
@@ -233,6 +234,10 @@ try {
 config = await getBizConfig();
 currency = getCurrency(config);
 setCurrency(currency);
+// Moneda base + tasa CUP definidas por el admin (los precios se guardan en USD)
+setBaseCurrency(currency);
+setCupRate(getCupRate(config));
+refreshPriceElements();
 } catch (_) { /* usar USD */ }
 // Header SIEMPRE visible (logo real + carrito + hamburguesa)
 renderSiteHeader('carrito', config);

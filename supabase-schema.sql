@@ -68,9 +68,14 @@ create table config_negocio (
   horario text,
   facebook text,
   instagram text,
-  moneda text default 'USD',
+  moneda text default 'USD',            -- moneda base en la que se guardan los precios (USD)
+  tasa_cambio_cup numeric(12,2) default 700, -- cuántos CUP equivalen a 1 USD (ej: 700)
   updated_at timestamptz default now()
 );
+
+-- Migración para bases de datos existentes: agrega la columna de tasa de cambio
+-- (la tienda muestra los precios en USD o CUP según lo que elija el comprador).
+alter table config_negocio add column if not exists tasa_cambio_cup numeric(12,2) default 700;
 
 create trigger update_config_negocio_updated_at
   before update on config_negocio
@@ -169,8 +174,8 @@ begin
 end $$;
 
 -- Configuración inicial del negocio
-insert into config_negocio (nombre_negocio, descripcion, telefono, whatsapp, email, direccion, horario, moneda) values
-('Mi Tienda Online', 'Tu tienda de confianza para productos de comida y aseo personal', '+1234567890', '+1234567890', 'contacto@mitienda.com', 'Calle Principal 123, Ciudad', 'Lunes a Sábado: 9:00 AM - 8:00 PM', 'USD');
+insert into config_negocio (nombre_negocio, descripcion, telefono, whatsapp, email, direccion, horario, moneda, tasa_cambio_cup) values
+('Mi Tienda Online', 'Tu tienda de confianza para productos de comida y aseo personal', '+1234567890', '+1234567890', 'contacto@mitienda.com', 'Calle Principal 123, Ciudad', 'Lunes a Sábado: 9:00 AM - 8:00 PM', 'USD', 700);
 
 -- ============================================
 -- 7. BUCKET DE STORAGE "productos" + POLICIES

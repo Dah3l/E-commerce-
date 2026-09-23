@@ -38,6 +38,19 @@
         <h1 id="hero-title" class="hero__title">Bienvenido a Mi Tienda</h1>
         <p class="hero__subtitle">Productos de comida y aseo personal directamente a tu puerta</p>
         
+        <!-- Selector de moneda (USD / CUP): los precios se guardan en USD y se
+             convierten con la tasa que define el admin (1 USD = X CUP) -->
+        <div class="currency-bar" id="currency-bar">
+          <div class="container currency-bar__inner">
+            <span class="currency-bar__label">Moneda:</span>
+            <div class="currency-switch" role="group" aria-label="Seleccionar moneda de los precios">
+              <button type="button" class="currency-switch__btn currency-switch__btn--active" data-currency="USD" aria-pressed="true">USD</button>
+              <button type="button" class="currency-switch__btn" data-currency="CUP" aria-pressed="false" disabled title="El administrador aún no configura la tasa de cambio">CUP</button>
+            </div>
+            <span class="currency-bar__rate" id="currency-rate" aria-live="polite"></span>
+          </div>
+        </div>
+
         <!-- Buscador -->
         <form class="search-form hero__search" role="search" id="searchForm">
           <input 

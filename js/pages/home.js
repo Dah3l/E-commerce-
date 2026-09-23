@@ -2,7 +2,8 @@ import { showToast, renderSiteFooter, renderSiteHeader, initScrollTopButton } fr
 import { getCategories } from '../categorias.js';
 import { getProducts, renderProductsGrid, showProductSkeletons, setCurrency } from '../productos.js';
 import { addToCart } from '../carrito.js';
-import { getBizConfig, getCurrency } from '../config-negocio.js';
+import { getBizConfig, getCurrency, getCupRate, getRateLabel } from '../config-negocio.js';
+import { setBaseCurrency, setCupRate, setSelectedCurrency, getActiveCurrency } from '../moneda.js';
 
 // El header se inyecta tras cargar la config del negocio (ver init() al
 // final): asi muestra el nombre real + contador del carrito siempre visible.
@@ -206,6 +207,11 @@ config = await getBizConfig() || {};
 } catch (_) { /* usar valores por defecto */ }
 currentCurrency = getCurrency(config);
 setCurrency(currentCurrency); // que las cards usen la moneda del admin
+// Moneda base (USD) y tasa CUP definidas por el admin: a partir de aqui los
+// precios se muestran en la moneda que el comprador tenga seleccionada
+setBaseCurrency(currentCurrency);
+setCupRate(getCupRate(config));
+initCurrencySelector(config);
 // Header SIEMPRE visible con carrito + hamburguesa, con el nombre real
 renderSiteHeader('inicio', config);
 renderSiteFooter(config);
@@ -255,6 +261,54 @@ setFeaturedVisible(true);
 loadAllProducts();
 }
 });
+}
+
+/**
+ * Selector de moneda del Home (USD / CUP).
+ * El admin define cuántos CUP equivalen a 1 USD; el comprador elige en qué
+ * moneda quiere ver los precios y su elección se recuerda (localStorage).
+ */
+function initCurrencySelector(config) {
+const bar = document.getElementById('currency-bar');
+if (!bar) return;
+
+const rate = getCupRate(config);
+const rateEl = document.getElementById('currency-rate');
+if (rateEl) rateEl.textContent = rate ? getRateLabel(config, currentCurrency) : '';
+
+const buttons = bar.querySelectorAll('.currency-switch__btn');
+const cupBtn = bar.querySelector('[data-currency="CUP"]');
+if (cupBtn) {
+cupBtn.disabled = !rate;
+cupBtn.title = rate ? 'Ver precios en pesos cubanos' : 'El administrador aún no configura la tasa de cambio';
+}
+
+const paint = () => {
+const active = getActiveCurrency();
+buttons.forEach(b => {
+const on = b.dataset.currency === active;
+b.classList.toggle('currency-switch__btn--active', on);
+b.setAttribute('aria-pressed', String(on));
+});
+};
+
+bar.addEventListener('click', (e) => {
+const btn = e.target.closest('.currency-switch__btn');
+if (!btn || btn.disabled) return;
+const code = btn.dataset.currency;
+if (code === 'CUP' && !rate) {
+showToast('La tasa de cambio USD → CUP aún no está configurada', 'warning');
+return;
+}
+setSelectedCurrency(code);
+paint();
+// Volver a renderizar los grids para mostrar los precios convertidos
+loadFeaturedProducts();
+loadAllProducts();
+showToast(`Precios mostrados en ${getActiveCurrency()}`, 'info');
+});
+
+paint();
 }
 
 // Barra de orden + filtro de ofertas sobre "Todos los Productos"
