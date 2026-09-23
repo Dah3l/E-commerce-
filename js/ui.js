@@ -585,6 +585,8 @@ export function renderSiteHeader(active = '') {
   mount.dataset.rendered = '1';
   const link = (href, label, key) =>
     `<li><a href="${href}" class="desktop-nav__link${key === active ? ' active' : ''}">${label}</a></li>`;
+  const mLink = (href, icon, label, key) =>
+    `<a href="${href}" class="mobile-nav__item${key === active ? ' active' : ''}"><span class="mobile-nav__icon">${icon}</span><span>${label}</span></a>`;
   mount.innerHTML = `
     <header class="site-header" role="banner">
       <div class="container">
@@ -606,13 +608,23 @@ export function renderSiteHeader(active = '') {
           </a>
         </div>
       </div>
-    </header>`;
+    </header>
+    <div class="nav-overlay"></div>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil">
+      ${mLink('/', '🏠', 'Inicio', 'inicio')}
+      ${mLink('/#categorias', '📂', 'Categorías', 'categorias')}
+      ${mLink('/carrito.html', '🛒', 'Carrito', 'carrito')}
+      ${mLink('/contacto.html', '📞', 'Contacto', 'contacto')}
+    </nav>`;
+  // Inicializar el menú hamburguesa sobre los elementos recién inyectados
+  initMobileMenu();
 }
 
 /**
  * Footer estandar para todas las paginas publicas (inyectado por JS)
+ * Incluye enlaces de interés: navegación, categorías dinámicas y contacto.
  */
-export function renderSiteFooter(bizName) {
+export async function renderSiteFooter(bizConfig = {}) {
   let mount = document.getElementById('site-footer-mount');
   if (!mount) {
     mount = document.createElement('div');
@@ -621,12 +633,63 @@ export function renderSiteFooter(bizName) {
   }
   if (mount.dataset.rendered) return;
   mount.dataset.rendered = '1';
+
+  const name = bizConfig.nombre_negocio || 'Mi Tienda Online';
   const year = new Date().getFullYear();
-  const name = bizName || 'Mi Tienda Online';
+  const tel = bizConfig.telefono || '';
+  const email = bizConfig.email || '';
+  const dir = bizConfig.direccion || '';
+  const phone = getWhatsAppNumberSafe(bizConfig);
+
+  // Categorías dinámicas (si están disponibles)
+  let catLinks = '';
+  try {
+    const { getCategories } = await import('./categorias.js');
+    const cats = await getCategories();
+    catLinks = (cats || []).slice(0, 6).map(c =>
+      `<li><a href="/?categoria=${encodeURIComponent(c.slug)}">${escapeHtml(c.nombre)}</a></li>`).join('');
+  } catch (_) { /* sin categorías */ }
+
   mount.innerHTML = `
     <footer class="site-footer" role="contentinfo">
       <div class="container">
-        <div class="footer__bottom"><p>&copy; ${year} ${name}</p></div>
+        <div class="footer__content">
+          <div class="footer__section">
+            <h3>🛒 ${escapeHtml(name)}</h3>
+            <p>Tu tienda de confianza. Productos de calidad con entrega rápida.</p>
+          </div>
+          <div class="footer__section">
+            <h3>Enlaces</h3>
+            <ul>
+              <li><a href="/">Inicio</a></li>
+              <li><a href="/#categorias">Categorías</a></li>
+              <li><a href="/carrito.html">Carrito</a></li>
+              <li><a href="/contacto.html">Contacto</a></li>
+            </ul>
+          </div>
+          ${catLinks ? `
+          <div class="footer__section">
+            <h3>Categorías</h3>
+            <ul>${catLinks}</ul>
+          </div>` : ''}
+          <div class="footer__section">
+            <h3>Contacto</h3>
+            ${tel ? `<p>📞 <a href="tel:${escapeHtml(tel.replace(/\s/g, ''))}">${escapeHtml(tel)}</a></p>` : ''}
+            ${phone ? `<p>💬 <a href="https://wa.me/${escapeHtml(phone)}" target="_blank" rel="noopener">WhatsApp</a></p>` : ''}
+            ${email ? `<p>✉️ <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>` : ''}
+            ${dir ? `<p>📍 ${escapeHtml(dir)}</p>` : ''}
+          </div>
+        </div>
+        <div class="footer__bottom"><p>&copy; ${year} ${escapeHtml(name)}</p></div>
       </div>
     </footer>`;
+}
+
+function getWhatsAppNumberSafe(config) {
+  try {
+    const raw = config && (config.whatsapp || config.telefono_whatsapp || config.telefono);
+    if (!raw) return '';
+    const digits = String(raw).replace(/\D/g, '');
+    return digits.length >= 8 ? digits : '';
+  } catch (_) { return ''; }
 }

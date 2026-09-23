@@ -16,26 +16,26 @@
     <div class="container">
       <h1 class="section__title">Tu Carrito</h1>
       <div id="cartContent"><p style="text-align:center; padding: 40px; color:#6B7280;">Cargando...</p></div>
+      <section class="section" id="cartSuggestSection" style="display:none;">
+        <h2 class="section__title">Añadir más productos</h2>
+        <div class="products-grid products-grid--scroll" id="cartSuggest"></div>
+      </section>
     </div>
   </main>
 
-
-  <nav class="mobile-nav">
-    <a href="/" class="mobile-nav__item"><span class="mobile-nav__icon">🏠</span><span>Inicio</span></a>
-    <a href="/#categorias" class="mobile-nav__item"><span class="mobile-nav__icon">📂</span><span>Categorías</span></a>
-    <a href="/carrito.html" class="mobile-nav__item active"><span class="mobile-nav__icon">🛒</span><span>Carrito</span></a>
-    <a href="/contacto.html" class="mobile-nav__item"><span class="mobile-nav__icon">📞</span><span>Contacto</span></a>
-  </nav>
 
   <script type="module">
     import { getCartItems, addToCart, removeFromCart, updateQuantity, getCartSubtotal, clearCart } from './js/carrito.js';
     import { formatPrice, escapeHtml } from './js/utils.js';
     import { showToast, renderSiteHeader, renderSiteFooter } from './js/ui.js';
     import { getBizConfig, getWhatsAppNumber, getCurrency } from './js/config-negocio.js';
+    import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from './js/productos.js';
 
     renderSiteHeader('carrito');
     let currency = 'USD';
+    let suggestProducts = [];
     const container = document.getElementById('cartContent');
+    const suggestEl = document.getElementById('cartSuggestSection');
 
     function updateCounter() {
       const count = getCartItems().reduce((t, i) => t + (parseInt(i.cantidad, 10) || 0), 0);
@@ -150,20 +150,49 @@
       }
     });
 
+    // Delegación global: sugerencias "Añadir más productos" + navegación a detalle
+    document.addEventListener('click', (e) => {
+      const addBtn = e.target.closest('#cartSuggest [data-add-to-cart]');
+      if (addBtn) {
+        if (addBtn.disabled) return;
+        e.preventDefault();
+        const p = suggestProducts.find(x => String(x.id) === String(addBtn.dataset.addToCart));
+        if (p && addToCart(p, 1)) showToast(`"${p.nombre}" añadido al carrito`, 'success');
+        return;
+      }
+      const card = e.target.closest('#cartSuggest .product-card[data-product-id]');
+      if (card) {
+        window.location.href = `/producto.html?id=${card.dataset.productId}`;
+      }
+    });
+
     window.addEventListener('cart-updated', () => { renderCart(); updateCounter(); });
+
+    async function loadSuggestions() {
+      try {
+        const { data } = await getProducts({ limit: 8 });
+        suggestProducts = data || [];
+        if (suggestProducts.length > 0) {
+          renderProductsGrid(suggestProducts, '#cartSuggest');
+          suggestEl.style.display = 'block';
+        }
+      } catch (_) { /* sin sugerencias */ }
+    }
 
     async function init() {
       let config = {};
       try {
         config = await getBizConfig();
         currency = getCurrency(config);
+        setCurrency(currency);
       } catch (_) { /* usar USD */ }
-      renderSiteFooter(config.nombre_negocio);
+      renderSiteFooter(config);
       if (config.nombre_negocio) {
         document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${config.nombre_negocio}`; });
       }
       renderCart();
       updateCounter();
+      loadSuggestions();
     }
 
     if (document.readyState === 'loading') {
