@@ -6,7 +6,6 @@
 
 import { supabase } from './supabase-client.js';
 import { DEFAULT_CURRENCY } from './config.js';
-import { setCupRate } from './utils.js';
 
 const CACHE_KEY = 'biz_config_cache';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
@@ -39,9 +38,6 @@ export async function getBizConfig(forceRefresh = false) {
       .single();
 
     if (!error && data) {
-      // Sincronizar la tasa USD->CUP configurada por el admin (si existe).
-      // Si la columna anadida todavia no esta en la BD, simplemente no aplica.
-      setCupRate(data.tasa_cup);
       memoryConfig = data;
       localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
       return data;

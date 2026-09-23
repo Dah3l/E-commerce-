@@ -3,112 +3,44 @@
  * Funciones helper para formateo, validación y otras tareas comunes
  */
 
-import { DEFAULT_CURRENCY, ALT_CURRENCY } from './config.js';
-
-const MONEDA_PREF_KEY = 'preferred_currency';
-
-// Tasa de cambio configurada por el admin: cuantos CUP equivalen a 1 USD.
-let cupPerUsd = 0;
+import { DEFAULT_CURRENCY } from './config.js';
 
 /**
- * Define la tasa de conversión USD -> CUP (desde config_negocio.tasa_cup).
- * @param {number|string} rate - CUP por 1 USD (0/null la desactiva)
- */
-export function setCupRate(rate) {
-  const n = parseFloat(String(rate ?? '').replace(',', '.'));
-  cupPerUsd = Number.isFinite(n) && n > 0 ? n : 0;
-}
-
-/**
- * ¿Conversión a CUP disponible? (tasa válida configurada por el admin)
- */
-export function isCupAvailable() {
-  return cupPerUsd > 0;
-}
-
-/**
- * Convierte un monto base (USD) a la moneda destino usando la tasa del admin.
- * @param {number} amountUSD - Monto en moneda base
- * @param {string} targetCode - Moneda destino ('USD' | 'CUP')
- * @returns {number} Monto convertido
- */
-export function convertAmount(amountUSD, targetCode) {
-  const code = normalizeCurrencyCode(targetCode);
-  if (code === ALT_CURRENCY && cupPerUsd > 0) return amountUSD * cupPerUsd;
-  return amountUSD; // sin tasa válida: mostrar la base sin convertir
-}
-
-/**
- * Moneda preferida por el comprador (persistida en localStorage).
- * Solo devuelve CUP si el admin configuró una tasa válida; si la tasa se
- * quita después, cae automáticamente a la moneda base (USD).
- * @returns {string} Código ISO ('USD' | 'CUP')
- */
-export function getPreferredCurrency() {
-  let saved = '';
-  try { saved = localStorage.getItem(MONEDA_PREF_KEY) || ''; } catch (_) { /* noop */ }
-  if (saved === ALT_CURRENCY && cupPerUsd > 0) return ALT_CURRENCY;
-  return DEFAULT_CURRENCY;
-}
-
-/**
- * Guarda la moneda elegida por el comprador. Intentar elegir 'CUP' sin tasa
- * configurada se ignora y se queda en la base.
- * @param {string} code - 'USD' | 'CUP'
- * @returns {string} moneda finalmente activa
- */
-export function setPreferredCurrency(code) {
-  const normalized = normalizeCurrencyCode(code);
-  const final = (normalized === ALT_CURRENCY && cupPerUsd <= 0) ? DEFAULT_CURRENCY : normalized;
-  try { localStorage.setItem(MONEDA_PREF_KEY, final); } catch (_) { /* noop */ }
-  return final;
-}
-
-/**
- * Normaliza un código de moneda a ISO mayúsculas válido o cae al default.
- * @param {string} currency - Código crudo
- * @returns {string} ISO de 3 letras o DEFAULT_CURRENCY
- */
-function normalizeCurrencyCode(currency) {
-  let code = String(currency || DEFAULT_CURRENCY).trim().toUpperCase();
-  if (!/^[A-Z]{3}$/.test(code)) code = DEFAULT_CURRENCY;
-  return code;
-}
-
-/**
- * Formatea un número (precio base en USD) como precio en la moneda pedida,
- * aplicando la conversión USD -> CUP cuando corresponde.
- * @param {number} amount - Cantidad en moneda base (USD)
- * @param {string} currency - Código de moneda destino (opcional)
- * @returns {string} Precio formateado (ej: "$1.99 USD" / "1,393.00 CUP")
+ * Formatea un número como precio en la moneda configurada
+ * @param {number} amount - Cantidad a formatear
+ * @param {string} currency - Código de moneda (opcional)
+ * @returns {string} Precio formateado
  */
 export function formatPrice(amount, currency = DEFAULT_CURRENCY) {
   if (amount === null || amount === undefined) return '';
-
-  // Normalizar codigo de moneda: debe ser ISO de 3 letras (USD, CUP, COP...).
+  
+  // Normalizar codigo de moneda: debe ser ISO de 3 letras (USD, COP, MXN...).
   // Si el admin configuro algo invalido (simbolo "$", texto libre, etc.)
   // se cae al default para evitar que Intl lance RangeError.
-  const code = normalizeCurrencyCode(currency);
-  const value = convertAmount(Number(amount), code);
+  let code = String(currency || DEFAULT_CURRENCY).trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(code)) code = DEFAULT_CURRENCY;
 
-  // CUP se expresa en unidades enteras (no tiene decimales practicos a esta tasa)
-  const decimals = code === ALT_CURRENCY ? 0 : 2;
+  const fmt = (cur) => new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: cur,
+    minimumFractionDigits: 2
+  }).format(amount);
 
-  const fmt = (cur, val, d) => new Intl.NumberFormat('en-US', {
-    style: 'decimal',
-    minimumFractionDigits: d,
-    maximumFractionDigits: d
-  }).format(val);
-
-  let num;
   try {
-    num = fmt(code, value, decimals);
+    return withCurrencyCode(fmt(code), code);
   } catch (_) {
-    // Moneda con formato ISO valido pero inexistente para Intl (ej: "ABC"):
-    // formatear el numero igualmente y mostrar solo el codigo como sufijo.
-    num = fmt('USD', value, decimals);
+    // Moneda con formato ISO valido pero inexistente (ej: "ABC")
+    return withCurrencyCode(fmt(DEFAULT_CURRENCY), DEFAULT_CURRENCY);
   }
-  return `$${num} ${code}`;
+}
+
+/**
+ * Garantiza que el precio formateado muestre tambien el codigo ISO de la
+ * moneda (ej: "$1.99" -> "$1.99 USD"), sin duplicarlo si Intl ya lo incluyo.
+ */
+function withCurrencyCode(formatted, code) {
+  if (!formatted.includes(code)) formatted = `${formatted} ${code}`;
+  return formatted;
 }
 
 /**
@@ -267,8 +199,8 @@ export function escapeHtml(text) {
 
 /**
  * Convierte texto plano en HTML seguro preservando su formato:
- * - Los saltos de l�nea simples se respetan (se convierten en <br>).
- * - Los p�rrafos (separados por doble salto de l�nea) se envuelven en <p>.
+ * - Los saltos de l�nea simples se respetan (se convierten en <br>).
+ * - Los p�rrafos (separados por doble salto de l�nea) se envuelven en <p>.
  * Todo el contenido se escapa primero, por lo que es seguro insertarlo con innerHTML.
  * @param {string} text - Texto plano (posible multilinea)
  * @returns {string} HTML escapado y formateado
@@ -277,7 +209,7 @@ export function formatPlainText(text) {
   if (!text || !String(text).trim()) return '';
 
   const escaped = escapeHtml(String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n')).replace(/\n/g, '<br>');
-  // Separar p�rrafos (doble salto de l�nea) en bloques <p>
+  // Separar p�rrafos (doble salto de l�nea) en bloques <p>
   return escaped
     .split(/(?:<br>\s*){2,}/)
     .map(p => p.trim())

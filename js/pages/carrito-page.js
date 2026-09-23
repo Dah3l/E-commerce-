@@ -10,7 +10,6 @@ return parseInt(p.stock, 10);
 import { formatPrice, escapeHtml } from '../utils.js';
 import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { getBizConfig, getWhatsAppNumber, getCurrency } from '../config-negocio.js';
-import { getPreferredCurrency, setCupRate } from '../utils.js';
 import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from '../productos.js';
 
 // El header se inyecta en init() con el nombre real del negocio
@@ -232,15 +231,8 @@ async function init() {
 let config = {};
 try {
 config = await getBizConfig();
-setCupRate(config.tasa_cup);
-currency = getPreferredCurrency();
+currency = getCurrency(config);
 setCurrency(currency);
-// Cambiar USD/CUP actualiza todos los precios del carrito y el resumen
-window.addEventListener('currency-change', (e) => {
-currency = e.detail?.currency || currency;
-setCurrency(currency);
-renderCart();
-});
 } catch (_) { /* usar USD */ }
 // Header SIEMPRE visible (logo real + carrito + hamburguesa)
 renderSiteHeader('carrito', config);

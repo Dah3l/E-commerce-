@@ -2,8 +2,7 @@ import { showToast, renderSiteFooter, renderSiteHeader, initScrollTopButton } fr
 import { getCategories } from '../categorias.js';
 import { getProducts, renderProductsGrid, showProductSkeletons, setCurrency } from '../productos.js';
 import { addToCart } from '../carrito.js';
-import { getBizConfig } from '../config-negocio.js';
-import { getPreferredCurrency, setCupRate } from '../utils.js';
+import { getBizConfig, getCurrency } from '../config-negocio.js';
 
 // El header se inyecta tras cargar la config del negocio (ver init() al
 // final): asi muestra el nombre real + contador del carrito siempre visible.
@@ -205,10 +204,8 @@ let config = {};
 try {
 config = await getBizConfig() || {};
 } catch (_) { /* usar valores por defecto */ }
-setCupRate(config.tasa_cup); // tasa USD->CUP configurada por el admin
-// Moneda visible: la elegida por el comprador (si hay tasa) o la base del admin
-currentCurrency = getPreferredCurrency();
-setCurrency(currentCurrency); // que las cards usen la moneda activa
+currentCurrency = getCurrency(config);
+setCurrency(currentCurrency); // que las cards usen la moneda del admin
 // Header SIEMPRE visible con carrito + hamburguesa, con el nombre real
 renderSiteHeader('inicio', config);
 renderSiteFooter(config);
@@ -315,13 +312,6 @@ initialCategory = btn.dataset.categoryId || null;
 activeFilters.categoriaId = initialCategory;
 
 await Promise.all([loadFeaturedProducts(), loadAllProducts()]);
-
-// Al cambiar USD/CUP en el header, re-renderizar los grids con la nueva moneda
-window.addEventListener('currency-change', async (e) => {
-currentCurrency = e.detail?.currency || 'USD';
-setCurrency(currentCurrency);
-await Promise.all([loadFeaturedProducts(), loadAllProducts()]);
-});
 
 if (catSlug) {
 document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
