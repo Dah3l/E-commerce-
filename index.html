@@ -108,6 +108,23 @@
     <section class="section section--border" aria-labelledby="all-products-title">
       <div class="container">
         <h2 id="all-products-title" class="section__title">Todos los Productos</h2>
+
+        <!-- Filtros: orden por precio + solo ofertas -->
+        <div class="sort-bar" id="sort-bar">
+          <label class="sort-bar__group">
+            <span class="sort-bar__label">Ordenar por:</span>
+            <select id="product-sort" class="sort-bar__select" aria-label="Ordenar productos por precio">
+              <option value="relevancia">Relevancia</option>
+              <option value="precio-asc">Precio: más barato primero</option>
+              <option value="precio-desc">Precio: más caro primero</option>
+            </select>
+          </label>
+          <label class="sort-bar__toggle">
+            <input type="checkbox" id="only-offers">
+            <span class="sort-bar__toggle-pill">🏷️ Solo ofertas</span>
+          </label>
+        </div>
+
         <div class="products-grid" id="all-products">
           <!-- Se carga dinámicamente desde JS -->
         </div>

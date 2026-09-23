@@ -4,6 +4,20 @@
  */
 
 /* ============================================
+   BLOQUEO DE SCROLL (menu movil abierto)
+   Se aplica con position:fixed en lugar de overflow:hidden para que no
+   rompa el sticky-footer del body (que es flexbox columna).
+   ============================================ */
+body.mobile-nav-open {
+  position: fixed;
+  top: calc(-1 * var(--scroll-lock-y, 0));
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ============================================
    HEADER / NAVEGACIÓN
    ============================================ */
 .site-header {
@@ -624,7 +638,10 @@ body {
    FOOTER SIMPLE (una linea)
    ============================================ */
 .site-footer--simple {
-  padding: var(--spacing-4, 16px) 0;
+  /* Mas aire vertical para que el footer no se vea apretado/pegado */
+  padding: var(--spacing-6, 24px) 0;
+  min-height: 72px;
+  box-sizing: border-box;
 }
 
 .footer-simple {

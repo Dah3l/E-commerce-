@@ -115,7 +115,26 @@ body {
   color: var(--color-gray-800);
   background-color: var(--color-white);
   min-height: 100vh;
+  /* Sticky footer: el body actua como columna flex para que <main> crezca
+     y el footer quede SIEMPRE pegado al pie de la ventana, incluso en paginas
+     cortas (asi en desktop no queda una franja oscura flotando con blanco
+     debajo). El padding-top del header fijo se define en layout.css. */
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
+}
+
+/* El contenido principal empuja el footer hacia abajo */
+main,
+#main-content {
+  flex: 1 0 auto;
+}
+
+/* Separacion minima entre el ultimo contenido y el footer para que
+   "no se vea pegada" la pagina al pie */
+#site-footer-mount {
+  flex-shrink: 0;
+  margin-top: var(--spacing-8, 32px);
 }
 
 /* ============================================

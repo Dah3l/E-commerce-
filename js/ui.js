@@ -537,10 +537,20 @@ export function toggleMobileMenu(show) {
   if (show) {
     menu?.classList.add('mobile-nav--open');
     overlay?.classList.add('nav-overlay--show');
-    body.style.overflow = 'hidden';
+    // Bloqueo de scroll con position:fixed (ver body.mobile-nav-open en
+    // layout.css). overflow:hidden sobre el body romperia el sticky-footer
+    // (el body es flexbox columna para que el footer quede al pie).
+    body.style.setProperty('--scroll-lock-y', `${window.scrollY}px`);
+    body.classList.add('mobile-nav-open');
   } else {
     menu?.classList.remove('mobile-nav--open');
     overlay?.classList.remove('nav-overlay--show');
+    if (body.classList.contains('mobile-nav-open')) {
+      const lockY = parseFloat(body.style.getPropertyValue('--scroll-lock-y')) || 0;
+      body.classList.remove('mobile-nav-open');
+      body.style.removeProperty('--scroll-lock-y');
+      window.scrollTo(0, lockY);
+    }
     body.style.overflow = '';
   }
 }

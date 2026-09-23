@@ -754,3 +754,117 @@
   outline: none;
   border-color: var(--color-primary);
 }
+
+/* ============================================
+   BARRA DE FILTROS / ORDEN (Todos los Productos)
+   ============================================ */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-3) var(--spacing-5);
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md, 8px);
+}
+
+.sort-bar__group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+}
+
+.sort-bar__label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-gray-600);
+  white-space: nowrap;
+}
+
+.sort-bar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-800);
+  background-color: var(--color-white);
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234B5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md, 8px);
+  padding: 8px 32px 8px 12px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sort-bar__select:hover {
+  border-color: var(--color-primary);
+}
+
+.sort-bar__select:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(107, 142, 35, 0.2);
+}
+
+/* Toggle "Solo ofertas": checkbox oculto + pill como switch visual */
+.sort-bar__toggle {
+  cursor: pointer;
+}
+
+.sort-bar__toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.sort-bar__toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-gray-600);
+  background-color: var(--color-white);
+  border: 1.5px solid var(--color-gray-300);
+  border-radius: 999px;
+  padding: 7px 16px;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.sort-bar__toggle:hover .sort-bar__toggle-pill {
+  border-color: var(--color-accent);
+  color: var(--color-accent-dark);
+}
+
+.sort-bar__toggle input:checked + .sort-bar__toggle-pill {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.sort-bar__toggle input:focus-visible + .sort-bar__toggle-pill {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 599.98px) {
+  .sort-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sort-bar__group {
+    justify-content: space-between;
+  }
+  .sort-bar__toggle-pill {
+    justify-content: center;
+  }
+}
