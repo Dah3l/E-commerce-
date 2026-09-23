@@ -65,10 +65,13 @@ addBtn.disabled = true;
 addBtn.textContent = 'Agotado';
 } else if (p.stock !== null && p.stock <= 5) {
 stockEl.className = 'product-detail__stock product-detail__stock--low';
-stockEl.textContent = `⚠ ¡Solo quedan ${p.stock}!`;
+stockEl.textContent = `En stock (${p.stock} ${p.stock === 1 ? 'disponible' : 'disponibles'})`;
+} else if (p.stock !== null) {
+stockEl.className = 'product-detail__stock';
+stockEl.textContent = `En stock (${p.stock} disponibles)`;
 } else {
 stockEl.className = 'product-detail__stock';
-stockEl.textContent = '✓ Disponible';
+stockEl.textContent = 'En stock';
 }
 
 if (p.categorias) {
