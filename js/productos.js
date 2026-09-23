@@ -13,32 +13,6 @@ export function setCurrency(currency) {
 }
 
 /**
- * Columnas para select() en la tabla productos.
- * Se listan explicitamente (en lugar de "*") para poder reintentar sin
- * "codigo" si la migracion que agrega esa columna aun no se ejecuto en la BD:
- * con "*" PostgREST devolveria todas las columnas existentes igualmente,
- * pero un fallo de schema cache sobre "codigo" debe detectarse y reintento
- * usando la variante "noCodigo".
- */
-export const PRODUCT_SELECT_COLUMNS = {
-  conCodigo: 'id, codigo, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at, categorias(nombre)',
-  noCodigo: 'id, nombre, descripcion, precio, precio_oferta, stock, categoria_id, destacado, activo, imagen_url, created_at, categorias(nombre)'
-};
-
-/**
- * Detecta errores de Postgres/PostgREST por columna inexistente.
- * @param {Object|string} errorOrMessage
- * @param {string} columnName
- */
-export function isMissingColumnError(errorOrMessage, columnName = 'codigo') {
-  const msg = String(
-    typeof errorOrMessage === 'string' ? errorOrMessage : (errorOrMessage?.message || '')
-  );
-  return new RegExp(columnName, 'i').test(msg) &&
-    /column .*does not exist|does not exist|schema cache|42703|PGRST202/i.test(msg);
-}
-
-/**
  * Obtiene un producto por su ID
  * @param {string} id - ID del producto
  * @returns {Promise<Object|null>} Producto o null
@@ -217,9 +191,9 @@ export async function getProducts(filtersParam = {}) {
     let { data, error, count } = await query;
 
     // Compatibilidad: si la columna "codigo" aun no existe en la BD (no se ha
-    // ejecutado la migracion), PostgREST puede fallar al resolver el schema.
+    // ejecutado la migracion), PostgREST falla al filtrar/ordenar por ella.
     // Reintentamos sin "codigo": busqueda solo por nombre y sin paginacion extra.
-    if (error && isMissingColumnError(error, 'codigo')) {
+    if (error && /codigo/i.test(error.message || '')) {
       console.warn('La columna "codigo" no existe en productos todavia. Ejecuta la migracion SQL. Reintentando sin codigo...');
       searchOrClause = null;
       const clean = String(filters.busqueda || '')
