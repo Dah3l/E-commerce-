@@ -21,6 +21,12 @@
   <link rel="icon" type="image/svg+xml" href="./assets/icons/favicon.svg">
 </head>
 <body>
+  <!-- Header, menú móvil y overlay se inyectan desde js/ui.js (renderSiteHeader).
+       El mount DEBE ir ANTES que el contenido: renderSiteHeader rellena este div
+       in situ, por lo que si estaba después de <main> el header aparecía abajo,
+       pegado al footer. -->
+  <div id="site-header-mount"></div>
+
   <!-- Skip link para accesibilidad -->
   <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
   
@@ -108,10 +114,6 @@
       </div>
     </section>
   </main>
-
-
-  <!-- Header, menú móvil y overlay se inyectan desde js/ui.js (renderSiteHeader) -->
-  <div id="site-header-mount"></div>
 
   <!-- Scripts -->
   <script type="module" src="./js/pages/home.js"></script>
