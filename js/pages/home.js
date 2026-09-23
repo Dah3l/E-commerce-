@@ -1,30 +1,16 @@
-import { initMobileMenu, showToast, renderSiteFooter, renderSiteHeader, initScrollTopButton } from '../ui.js';
+import { showToast, renderSiteFooter, renderSiteHeader, initScrollTopButton } from '../ui.js';
 import { getCategories } from '../categorias.js';
 import { getProducts, renderProductsGrid, showProductSkeletons } from '../productos.js';
-import { getCartCount, addToCart } from '../carrito.js';
+import { addToCart } from '../carrito.js';
 import { getBizConfig, getCurrency } from '../config-negocio.js';
 
-// Header inyectado por JS (mismo que carrito/producto/contacto): incluye la
-// hamburguesa funcional y el menú móvil sin Carrito/Categorías repetidos
-renderSiteHeader('inicio');
-initMobileMenu();
+// El header se inyecta tras cargar la config del negocio (ver init() al
+// final): asi muestra el nombre real + contador del carrito siempre visible.
 initScrollTopButton();
 
 // Cache de productos cargados (para añadir al carrito sin otro fetch)
 let loadedProducts = [];
 let currentCurrency = 'USD';
-
-// Inicializar contador del carrito
-function updateCartCounter() {
-const count = getCartCount();
-const counterElement = document.querySelector('.cart-count');
-if (counterElement) {
-counterElement.textContent = count;
-counterElement.style.display = count > 0 ? 'flex' : 'none';
-}
-}
-updateCartCounter();
-window.addEventListener('cart-updated', updateCartCounter);
 
 // Delegación de eventos: botones "Añadir al carrito" + navegación a detalle
 document.addEventListener('click', (e) => {
@@ -142,17 +128,19 @@ document.getElementById('all-products').innerHTML = `<p style="grid-column: 1 / 
 }
 }
 
-// Aplica datos del negocio (nombre, moneda, contacto)
+// Aplica datos del negocio (nombre, moneda, contacto) e inyecta el header
 async function applyBizConfig() {
+let config = {};
 try {
-const config = await getBizConfig();
+config = await getBizConfig() || {};
+} catch (_) { /* usar valores por defecto */ }
 currentCurrency = getCurrency(config);
+// Header SIEMPRE visible con carrito + hamburguesa, con el nombre real
+renderSiteHeader('inicio', config);
 renderSiteFooter(config);
 if (config.nombre_negocio) {
 document.title = `${config.nombre_negocio} - Inicio`;
-document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${config.nombre_negocio}`; });
 }
-} catch (_) { /* usar valores por defecto */ }
 }
 
 // Buscador del hero: filtra el grid de productos en la misma página

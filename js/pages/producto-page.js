@@ -1,24 +1,15 @@
 import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGrid, setCurrency } from '../productos.js';
-import { addToCart, getCartItems } from '../carrito.js';
-import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton } from '../ui.js';
+import { addToCart } from '../carrito.js';
+import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { formatPrice, getUrlParam } from '../utils.js';
 import { getBizConfig, getCurrency, getWhatsAppNumber } from '../config-negocio.js';
 
-renderSiteHeader('');
-initScrollTopButton(); // inyecta header + menú móvil y activa la hamburguesa
+// El header se inyecta en init() con el nombre real del negocio
+initScrollTopButton();
 
 let product = null;
 let currency = 'USD';
 let bizConfig = {};
-
-function updateCartCounter() {
-const el = document.querySelector('.cart-count');
-if (!el) return;
-const count = getCartItems().reduce((s, i) => s + (parseInt(i.cantidad, 10) || 1), 0);
-el.textContent = count;
-el.style.display = count > 0 ? 'flex' : 'none';
-}
-window.addEventListener('cart-updated', updateCartCounter);
 
 function qty() {
 const n = parseInt(document.getElementById('qtyInput').value, 10);
@@ -156,12 +147,11 @@ try {
 bizConfig = await getBizConfig();
 currency = getCurrency(bizConfig);
 setCurrency(currency);
-if (bizConfig.nombre_negocio) {
-document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${bizConfig.nombre_negocio}`; });
-}
-renderSiteFooter(bizConfig);
 } catch (_) { /* defaults */ }
-updateCartCounter();
+// Header SIEMPRE visible (logo real + carrito + hamburguesa)
+renderSiteHeader('', bizConfig);
+try { renderSiteFooter(bizConfig); } catch (_) { /* defaults */ }
+updateGlobalCartCount();
 await loadProduct();
 }
 
