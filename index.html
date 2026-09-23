@@ -178,8 +178,9 @@
     import { getCartCount, addToCart } from './js/carrito.js';
     import { getBizConfig, getCurrency } from './js/config-negocio.js';
 
-    // Inicializar menú móvil
-    initMobileMenu();
+    // Inicializar menú móvil (solo si el header es estático en esta página;
+    // renderSiteHeader ya lo inicializa cuando inyecta el header por JS)
+    if (!document.getElementById('site-header-mount')) initMobileMenu();
 
     // Cache de productos cargados (para añadir al carrito sin otro fetch)
     let loadedProducts = [];

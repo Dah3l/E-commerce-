@@ -155,8 +155,9 @@ export async function getProducts(filters = {}) {
   }
   
   if (filters.busqueda) {
-    const searchTerms = filters.busqueda.toLowerCase().split(' ');
-    const conditions = searchTerms.map(term => `nombre.ilike(%${term}%)`);
+    // Formato PostgREST: ilike.*termino* (los % literales rompen el parser de or())
+    const searchTerms = filters.busqueda.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const conditions = searchTerms.map(term => `nombre.ilike.*${term}*`);
     query = query.or(conditions.join(','));
   }
   
