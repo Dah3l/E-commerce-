@@ -20,11 +20,11 @@
   <main id="main-content" class="cart-page" role="main">
     <div class="container">
       <h1 class="section__title">Tu Carrito</h1>
-      <div id="cartContent"></div>
+      <div id="cartContent"><p style="text-align:center; padding: 40px; color:#6B7280;">Cargando...</p></div>
     </div>
   </main>
 
-  <footer class="site-footer"><div class="container"><div class="footer__bottom"><p>&copy; 2024 Mi Tienda Online</p></div></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer__bottom"><p>&copy; 2026 Mi Tienda Online</p></div></div></footer>
   <nav class="mobile-nav">
     <a href="/" class="mobile-nav__item"><span class="mobile-nav__icon">🏠</span><span>Inicio</span></a>
     <a href="/#categorias" class="mobile-nav__item"><span class="mobile-nav__icon">📂</span><span>Categorías</span></a>
@@ -33,15 +33,26 @@
   </nav>
 
   <script type="module">
-    import { getCartItems, removeFromCart, updateQuantity, getCartSubtotal, clearCart, checkoutViaWhatsApp } from './js/carrito.js';
-    import { formatPrice } from './js/utils.js';
+    import { getCartItems, addToCart, removeFromCart, updateQuantity, getCartSubtotal, clearCart } from './js/carrito.js';
+    import { formatPrice, escapeHtml } from './js/utils.js';
     import { showToast } from './js/ui.js';
+    import { getBizConfig, getWhatsAppNumber, getCurrency } from './js/config-negocio.js';
+
+    let currency = 'USD';
+    const container = document.getElementById('cartContent');
+
+    function updateCounter() {
+      const count = getCartItems().reduce((t, i) => t + (parseInt(i.cantidad, 10) || 0), 0);
+      document.querySelectorAll('.cart-count').forEach(el => {
+        el.textContent = count;
+        el.style.display = count > 0 ? 'flex' : 'none';
+      });
+    }
 
     function renderCart() {
       const items = getCartItems();
       const subtotal = getCartSubtotal();
-      const container = document.getElementById('cartContent');
-      
+
       if (items.length === 0) {
         container.innerHTML = '<div class="cart-empty"><div class="cart-empty__icon">🛒</div><h2 class="cart-empty__title">Tu carrito está vacío</h2><p class="cart-empty__text">Agrega productos para comenzar tu compra</p><a href="/" class="btn btn--primary">Ver Productos</a></div>';
         return;
@@ -50,42 +61,106 @@
       container.innerHTML = `<div class="cart-container">
         <div class="cart-items">${items.map(item => `
           <div class="cart-item">
-            <img src="${item.imagen_url || '/assets/icons/placeholder.svg'}" alt="${item.nombre}" class="cart-item__image">
+            <img src="${escapeHtml(item.imagen_url || '/assets/icons/placeholder.svg')}" alt="${escapeHtml(item.nombre)}" class="cart-item__image" onerror="this.src='/assets/icons/placeholder.svg'">
             <div class="cart-item__info">
-              <h3 class="cart-item__name">${item.nombre}</h3>
-              <p class="cart-item__price">${formatPrice(item.precio)}</p>
+              <h3 class="cart-item__name">${escapeHtml(item.nombre)}</h3>
+              <p class="cart-item__price">${formatPrice(item.precio, currency)}</p>
               <div class="cart-item__actions">
                 <div class="quantity-selector">
-                  <button class="quantity-btn" onclick="updateQty('${item.producto_id}', ${item.cantidad - 1})">-</button>
-                  <input type="number" class="quantity-input" value="${item.cantidad}" min="1" onchange="updateQty('${item.producto_id}', parseInt(this.value))">
-                  <button class="quantity-btn" onclick="updateQty('${item.producto_id}', ${item.cantidad + 1})">+</button>
+                  <button class="quantity-btn" data-dec="${escapeHtml(item.producto_id)}" aria-label="Restar uno">−</button>
+                  <input type="number" class="quantity-input" data-qty="${escapeHtml(item.producto_id)}" value="${parseInt(item.cantidad, 10) || 1}" min="1" inputmode="numeric">
+                  <button class="quantity-btn" data-inc="${escapeHtml(item.producto_id)}" aria-label="Sumar uno">+</button>
                 </div>
-                <button class="cart-item__remove" onclick="removeItem('${item.producto_id}')" aria-label="Eliminar">🗑️</button>
+                <button class="cart-item__remove" data-remove="${escapeHtml(item.producto_id)}" aria-label="Eliminar">🗑️</button>
               </div>
             </div>
           </div>`).join('')}</div>
         <div class="cart-summary">
           <h2 class="cart-summary__title">Resumen</h2>
-          <div class="cart-summary__row"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>
-          <div class="cart-summary__row cart-summary__row--total"><span>Total</span><span>${formatPrice(subtotal)}</span></div>
-          <button class="btn btn--primary btn--lg cart-summary__btn" onclick="checkout()">✅ Finalizar por WhatsApp</button>
-          <button class="btn btn--secondary btn--block" onclick="clearCartAndRefresh()">🗑️ Vaciar Carrito</button>
+          <div class="cart-summary__row"><span>Subtotal</span><span>${formatPrice(subtotal, currency)}</span></div>
+          <div class="cart-summary__row cart-summary__row--total"><span>Total</span><span>${formatPrice(subtotal, currency)}</span></div>
+          <button class="btn btn--primary btn--lg cart-summary__btn" id="btnCheckout">✅ Finalizar por WhatsApp</button>
+          <button class="btn btn--secondary btn--block" id="btnClearCart">🗑️ Vaciar Carrito</button>
         </div>
       </div>`;
     }
 
-    window.updateQty = (id, qty) => { updateQuantity(id, qty); renderCart(); updateCounter(); };
-    window.removeItem = (id) => { removeFromCart(id); showToast('Producto eliminado', 'info'); renderCart(); updateCounter(); };
-    window.clearCartAndRefresh = () => { clearCart(); renderCart(); updateCounter(); showToast('Carrito vaciado', 'info'); };
-    window.checkout = () => checkoutViaWhatsApp('1234567890', 'USD');
+    // Delegación de eventos: cantidades y eliminar
+    container.addEventListener('click', (e) => {
+      const inc = e.target.closest('[data-inc]');
+      const dec = e.target.closest('[data-dec]');
+      const rem = e.target.closest('[data-remove]');
 
-    function updateCounter() {
-      const count = getCartItems().reduce((t, i) => t + i.cantidad, 0);
-      document.querySelectorAll('.cart-count').forEach(el => { el.textContent = count; el.style.display = count > 0 ? 'flex' : 'none'; });
+      if (inc) {
+        const item = getCartItems().find(i => String(i.producto_id) === inc.dataset.inc);
+        if (item) { addToCart(item, 1); renderCart(); updateCounter(); }
+        return;
+      }
+      if (dec) {
+        const item = getCartItems().find(i => String(i.producto_id) === dec.dataset.dec);
+        if (item) updateQuantity(item.producto_id, (parseInt(item.cantidad, 10) || 1) - 1);
+        return;
+      }
+      if (rem) {
+        removeFromCart(rem.dataset.remove);
+        showToast('Producto eliminado', 'info');
+        // renderCart + counter se actualizan vía evento cart-updated
+      }
+    });
+
+    container.addEventListener('change', (e) => {
+      const qty = e.target.closest('[data-qty]');
+      if (qty) {
+        updateQuantity(qty.dataset.qty, parseInt(qty.value, 10) || 1);
+      }
+    });
+
+    // Checkout por WhatsApp con número real del negocio
+    container.addEventListener('click', async (e) => {
+      if (!e.target.closest('#btnCheckout')) return;
+      const items = getCartItems();
+      if (items.length === 0) return;
+
+      const config = await getBizConfig();
+      const phone = getWhatsAppNumber(config);
+      if (!phone) {
+        showToast('El número de WhatsApp no está configurado en la tienda', 'error');
+        return;
+      }
+
+      const cur = getCurrency(config);
+      const lines = [
+        `¡Hola${config.nombre_negocio ? ' ' + config.nombre_negocio : ''}! 👋 Quiero hacer este pedido:`,
+        '',
+        ...items.map(i => `• ${i.cantidad} x ${i.nombre} — ${formatPrice(Number(i.precio) * (parseInt(i.cantidad, 10) || 1), cur)}`),
+        '',
+        `*Total: ${formatPrice(getCartSubtotal(), cur)}*`
+      ];
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
+    });
+
+    container.addEventListener('click', (e) => {
+      if (!e.target.closest('#btnClearCart')) return;
+      clearCart();
+      showToast('Carrito vaciado', 'info');
+    });
+
+    window.addEventListener('cart-updated', () => { renderCart(); updateCounter(); });
+
+    async function init() {
+      try {
+        const config = await getBizConfig();
+        currency = getCurrency(config);
+      } catch (_) { /* usar USD */ }
+      renderCart();
+      updateCounter();
     }
 
-    document.addEventListener('DOMContentLoaded', renderCart);
-    window.addEventListener('cart-updated', renderCart);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>

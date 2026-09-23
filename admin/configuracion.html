@@ -61,17 +61,22 @@
   </div>
 
   <script type="module">
-    import { isAuthenticated, changePassword } from '../js/auth.js';
+    import { isAuthenticated, logout, changePassword } from '../js/auth.js';
     import { supabase } from '../js/supabase-client.js';
     import { showToast } from '../js/ui.js';
+    import { getBizConfig, clearConfigCaches } from '../js/config-negocio.js';
 
     if (!isAuthenticated()) window.location.href = '/admin/login.html';
-    window.toggleSidebar = () => document.getElementById('adminSidebar').classList.toggle('admin-sidebar--open');
-    window.logout = () => { sessionStorage.removeItem('admin_session'); window.location.href = '/admin/login.html'; };
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.admin-sidebar-toggle')) {
+        document.getElementById('adminSidebar').classList.toggle('admin-sidebar--open');
+      }
+      if (e.target.closest('#btnLogout')) logout();
+    });
 
     async function loadConfig() {
-      const { data } = await supabase.from('config_negocio').select('*').eq('id', 1).single();
-      if (data) {
+      const data = await getBizConfig(true);
+      if (data && Object.keys(data).length) {
         document.getElementById('nombre_negocio').value = data.nombre_negocio || '';
         document.getElementById('descripcion').value = data.descripcion || '';
         document.getElementById('telefono').value = data.telefono || '';
@@ -96,9 +101,18 @@
         moneda: document.getElementById('moneda').value,
         updated_at: new Date().toISOString()
       };
-      const { error } = await supabase.from('config_negocio').upsert({ id: 1, ...data });
-      if (error) showToast('Error guardando configuración', 'error');
-      else showToast('Configuración guardada', 'success');
+      let result = await supabase.from('config_negocio').upsert({ id: 1, ...data });
+      if (result.error) {
+        // Si la fila no existe todavía, intentar insertarla
+        const ins = await supabase.from('config_negocio').insert([{ id: 1, ...data }]);
+        if (ins.error) {
+          console.error(ins.error);
+          showToast('Error guardando configuración: ' + ins.error.message, 'error');
+          return;
+        }
+      }
+      clearConfigCaches();
+      showToast('Configuración guardada ✓', 'success');
     });
 
     document.getElementById('passwordForm').addEventListener('submit', async (e) => {

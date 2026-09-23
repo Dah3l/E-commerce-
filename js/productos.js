@@ -73,12 +73,7 @@ export async function getProductById(id) {
     if (error) throw error;
     if (!data) return null;
     
-    // Procesar imagen
-    if (data.imagen_url) {
-      data.imagen_url = getStorageUrl(data.imagen_url) || data.imagen_url;
-    }
-    
-    return data;
+    return normalizeProduct(data);
   } catch (error) {
     console.error('Error obteniendo producto:', error);
     return null;
@@ -141,11 +136,7 @@ export async function getProducts(filters = {}) {
     
     if (error) throw error;
     
-    // Procesar imágenes
-    const products = (data || []).map(product => ({
-      ...product,
-      imagen_url: product.imagen_url ? getStorageUrl(product.imagen_url) : null
-    }));
+    const products = (data || []).map(normalizeProduct);
     
     return { data: products, count: count || 0 };
   } catch (error) {
@@ -182,15 +173,28 @@ export async function getRelatedProducts(productId, categoriaId, limit = 4) {
     
     if (error) throw error;
     
-    // Procesar imágenes
-    return (data || []).map(product => ({
-      ...product,
-      imagen_url: product.imagen_url ? getStorageUrl(product.imagen_url) : null
-    }));
+    return (data || []).map(normalizeProduct);
   } catch (error) {
     console.error('Error obteniendo productos relacionados:', error);
     return [];
   }
+}
+
+/**
+ * Normaliza un registro de producto: imagen, stock y precio numéricos
+ * @param {Object} product
+ * @returns {Object}
+ */
+export function normalizeProduct(product) {
+  if (!product) return product;
+  const parsedStock = parseInt(product.stock, 10);
+  return {
+    ...product,
+    precio: Number(product.precio) || 0,
+    precio_oferta: product.precio_oferta ? Number(product.precio_oferta) : null,
+    stock: Number.isFinite(parsedStock) ? parsedStock : null,
+    imagen_url: product.imagen_url ? (getStorageUrl(product.imagen_url) || product.imagen_url) : null
+  };
 }
 
 /**
@@ -242,7 +246,7 @@ export function renderProductCard(product) {
         <button 
           class="product-card__btn btn btn--primary"
           ${product.stock === 0 ? 'disabled' : ''}
-          onclick="window.addToCartAndNotify('${product.id}')"
+          data-add-to-cart="${product.id}"
         >
           ${product.stock === 0 ? 'Agotado' : 'Añadir al carrito'}
         </button>
