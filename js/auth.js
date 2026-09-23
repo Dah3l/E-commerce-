@@ -164,7 +164,9 @@ export function isAuthenticated() {
  */
 export function logout() {
   sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  window.location.href = '/admin/login.html';
+  // Redirige a login relativo a la ubicacion actual (funciona en raiz y subcarpetas)
+  const base = window.location.pathname.split('/').slice(0, -1).join('/');
+  window.location.href = `${base.includes('/admin') ? '.' : './admin'}/login.html`;
 }
 
 /**

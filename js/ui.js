@@ -368,7 +368,7 @@ export function showFormModal(options = {}) {
           return `
             <div class="form-group">
               <label class="form-label" for="${id}">${escapeHtml(f.label)}</label>
-              ${f.previewUrl ? `<div class="fm-file-preview"><img src="${escapeHtml(f.previewUrl)}" alt="Imagen actual" onerror="this.onerror=null;this.src='/assets/icons/placeholder.svg'"><button type="button" class="btn btn--small btn--secondary fm-file-remove" data-fm-remove-file="${escapeHtml(f.id)}">Quitar imagen</button></div>` : `<small style="color:#6B7280;display:block;margin-bottom:6px;">Sin imagen (se mostrará un placeholder).</small>`}
+              ${f.previewUrl ? `<div class="fm-file-preview"><img src="${escapeHtml(f.previewUrl)}" alt="Imagen actual" onerror="this.onerror=null;this.src='./assets/icons/placeholder.svg'"><button type="button" class="btn btn--small btn--secondary fm-file-remove" data-fm-remove-file="${escapeHtml(f.id)}">Quitar imagen</button></div>` : `<small style="color:#6B7280;display:block;margin-bottom:6px;">Sin imagen (se mostrará un placeholder).</small>`}
               <input type="file" class="form-input" id="${id}" accept="${f.accept || 'image/*'}">
               ${f.previewUrl ? `<small style="color:#6B7280;">Selecciona un archivo solo si quieres reemplazar la imagen actual.</small>` : ''}
             </div>`;
@@ -671,18 +671,18 @@ export function renderSiteHeader(active = '') {
     <header class="site-header" role="banner">
       <div class="container">
         <div class="header-main">
-          <a href="/" class="header__logo">🛒 Mi Tienda</a>
+          <a href="./" class="header__logo">🛒 Mi Tienda</a>
           <button class="hamburger-btn" aria-label="Menú" aria-expanded="false" aria-controls="mobile-nav">
             <span></span><span></span><span></span>
           </button>
           <nav class="desktop-nav" aria-label="Navegación principal">
             <ul class="desktop-nav__list">
-              ${link('/', 'Inicio', 'inicio')}
-              ${link('/#categorias', 'Categorías', 'categorias')}
-              ${link('/contacto.html', 'Contacto', 'contacto')}
+              ${link('./' ,'Inicio', 'inicio')}
+              ${link('./#categorias', 'Categorías', 'categorias')}
+              ${link('./contacto.html', 'Contacto', 'contacto')}
             </ul>
           </nav>
-          <a href="/carrito.html" class="header__cart" aria-label="Ver carrito">
+          <a href="./carrito.html" class="header__cart" aria-label="Ver carrito">
             <span class="cart-icon">🛒</span>
             <span class="cart-count" style="display: none;">0</span>
           </a>
@@ -690,8 +690,8 @@ export function renderSiteHeader(active = '') {
       </div>
     </header>
     <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil">
-      ${mLink('/', '🏠', 'Inicio', 'inicio')}
-      ${mLink('/contacto.html', '📞', 'Contacto', 'contacto')}
+      ${mLink('./' ,'🏠', 'Inicio', 'inicio')}
+      ${mLink('./contacto.html', '📞', 'Contacto', 'contacto')}
       <button type="button" class="mobile-nav__item mobile-nav__item--top" data-scroll-top aria-label="Volver arriba"><span class="mobile-nav__icon">⬆️</span><span>Volver arriba</span></button>
     </nav>`;
   // Asegurar que exista un overlay (útil en páginas con header estático como index)
@@ -730,9 +730,9 @@ export async function renderSiteFooter(bizConfig = {}) {
         <div class="footer-simple">
           <span class="footer-simple__brand">🛒 ${escapeHtml(name)}</span>
           <nav class="footer-simple__links" aria-label="Enlaces del pie de página">
-            <a href="/">Inicio</a>
-            <a href="/carrito.html">Carrito</a>
-            <a href="/contacto.html">Contacto</a>
+            <a href="./">Inicio</a>
+            <a href="./carrito.html">Carrito</a>
+            <a href="./contacto.html">Contacto</a>
           </nav>
           <span class="footer-simple__copy">&copy; ${year}</span>
         </div>

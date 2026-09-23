@@ -122,11 +122,11 @@ export function renderCategoryCard(category) {
     <a href="/categoria.html?slug=${category.slug}" class="category-card">
       <div class="category-card__image-container">
         <img 
-          src="${imagenUrl || '/assets/icons/category-placeholder.svg'}" 
+          src="${imagenUrl || './assets/icons/placeholder.svg'}" 
           alt="${category.nombre}"
           loading="lazy"
           class="category-card__image"
-          onerror="this.src='/assets/icons/category-placeholder.svg'"
+          onerror="this.src='./assets/icons/placeholder.svg'"
         >
       </div>
       <div class="category-card__info">

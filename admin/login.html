@@ -6,9 +6,9 @@
   <title>Login Admin - Mi Tienda</title>
   
   <!-- Estilos -->
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/admin.css">
 </head>
 <body class="admin-login-page">
   <div class="admin-login-card">
@@ -41,7 +41,7 @@
     </form>
     
     <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6B7280;">
-      <a href="/" style="color: var(--color-primary);">← Volver a la tienda</a>
+      <a href="../" style="color: var(--color-primary);">← Volver a la tienda</a>
     </p>
   </div>
 
@@ -86,7 +86,8 @@
           showToast('¡Bienvenido!', 'success');
           
           // Redirigir al dashboard o página original
-          const redirectUrl = sessionStorage.getItem('admin_redirect_url') || '/admin/dashboard.html';
+          const savedRedirect = sessionStorage.getItem('admin_redirect_url') || '';
+          const redirectUrl = savedRedirect.endsWith('.html') ? savedRedirect : './dashboard.html';
           sessionStorage.removeItem('admin_redirect_url');
           window.location.href = redirectUrl;
         } else {
