@@ -420,3 +420,52 @@
     border: 1px solid #ccc;
   }
 }
+
+/* ============================================
+   PÁGINA DE PRODUCTO (detalle) - layout 2 columnas + breadcrumb
+   ============================================ */
+.product-detail__layout {
+  display: grid;
+  gap: var(--spacing-6);
+}
+
+@media (min-width: 768px) {
+  .product-detail__layout {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-8);
+  }
+}
+
+.breadcrumb {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+  margin-bottom: var(--spacing-4);
+}
+
+.breadcrumb a {
+  color: var(--color-primary);
+}
+
+.quantity-input {
+  width: 64px;
+  text-align: center;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-2);
+  font-size: var(--font-size-base);
+}
+
+.product-detail__price-old {
+  text-decoration: line-through;
+  color: var(--color-gray-500);
+  font-size: var(--font-size-lg);
+}
+
+.badge--offer {
+  background-color: var(--color-error, #DC2626);
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 700;
+}
