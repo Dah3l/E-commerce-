@@ -7,9 +7,9 @@ const p = productStockCache[String(productId)];
 if (!p || p.stock === null || p.stock === undefined) return null;
 return parseInt(p.stock, 10);
 }
-import { formatPrice, escapeHtml } from '../utils.js';
+import { formatPrice, formatPriceBoth, escapeHtml } from '../utils.js';
 import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
-import { getBizConfig, getWhatsAppNumber, getCurrency } from '../config-negocio.js';
+import { getBizConfig, getWhatsAppNumber } from '../config-negocio.js';
 import { getPreferredCurrency, setCupRate } from '../utils.js';
 import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from '../productos.js';
 
@@ -123,14 +123,19 @@ showToast('El número de WhatsApp no está configurado en la tienda', 'error');
 return;
 }
 
-const cur = getCurrency(config);
+// El mensaje SIEMPRE incluye ambas monedas (USD y su conversión a CUP),
+// independientemente de la moneda que el comprador tenga seleccionada en la tienda.
+const rate = parseFloat(String(config.tasa_cup ?? '').replace(',', '.'));
 const lines = [
 `¡Hola${config.nombre_negocio ? ' ' + config.nombre_negocio : ''}! 👋 Quiero hacer este pedido:`,
 '',
-...items.map(i => `• ${i.cantidad} x ${i.nombre} — ${formatPrice(Number(i.precio) * (parseInt(i.cantidad, 10) || 1), cur)}`),
+...items.map(i => `• ${i.cantidad} x ${i.nombre} — ${formatPriceBoth(Number(i.precio) * (parseInt(i.cantidad, 10) || 1))}`),
 '',
-`*Total: ${formatPrice(getCartSubtotal(), cur)}*`
+`*Total: ${formatPriceBoth(getCartSubtotal())}*`
 ];
+if (Number.isFinite(rate) && rate > 0) {
+lines.push('', `(Tasa de cambio: 1 USD = ${rate} CUP)`);
+}
 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
 });
 

@@ -83,6 +83,51 @@
 
     let categorias = [];
     let productos = [];
+    // Config del negocio: moneda base + tasa CUP por 1 USD (para permitir
+    // que el admin escriba los precios en USD o directamente en CUP)
+    let bizConfig = {};
+    // Moneda elegida en el formulario de producto (persiste entre aperturas del modal)
+    let modalPriceCurrency = 'USD';
+
+    async function loadBizConfig() {
+      try {
+        const { data } = await supabase.from('config_negocio').select('*').eq('id', 1).single();
+        bizConfig = data || {};
+      } catch (_) { bizConfig = {}; }
+      setCupRate(bizConfig.tasa_cup);
+    }
+
+    function cupRate() {
+      const n = parseFloat(String(bizConfig?.tasa_cup ?? '').replace(',', '.'));
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
+    // --- Helpers de conversión para el formulario de productos ---
+    // La base de datos SIEMPRE guarda los precios en la moneda base (USD).
+    function toBase(amount, fromCurrency) {
+      const v = parseFloat(String(amount ?? '').replace(',', '.'));
+      if (!Number.isFinite(v)) return NaN;
+      if (fromCurrency === 'CUP') {
+        const r = cupRate();
+        if (!r) return NaN; // no debería ocurrir: el selector CUP solo aparece con tasa válida
+        return Math.round((v / r) * 100) / 100;
+      }
+      return v;
+    }
+    function baseTo(baseAmount, toCurrency) {
+      const v = Number(baseAmount);
+      if (!Number.isFinite(v)) return '';
+      if (toCurrency === 'CUP') {
+        const r = cupRate();
+        return r ? Math.round(v * r * 100) / 100 : v;
+      }
+      return v;
+    }
+    function fmtNum(v) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return '-';
+      return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: n % 1 === 0 ? 0 : 2 });
+    }
 
     async function loadCategorias() {
       const { data, error } = await supabase.from('categorias').select('id, nombre').order('nombre');
@@ -140,7 +185,13 @@
             ${desc ? `<div class="cell-product__desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>` : ''}
           </td>
           <td>${escapeHtml(p.categorias?.nombre || '-')}</td>
-          <td class="admin-price">${p.precio_oferta ? `<del>$${Number(p.precio).toFixed(2)}</del>$${Number(p.precio_oferta).toFixed(2)}` : `$${Number(p.precio).toFixed(2)}`}</td>
+          <td class="admin-price">${(() => {
+            const hasOffer = p.precio_oferta && p.precio_oferta < p.precio;
+            const base = hasOffer ? p.precio_oferta : p.precio;
+            const r = cupRate();
+            const cup = r > 0 ? ` <small style="color:#6B7280;display:block;">≈ ${fmtNum(Math.round(base * r))} CUP</small>` : '';
+            return (hasOffer ? `<del>$${Number(p.precio).toFixed(2)}</del>$${Number(p.precio_oferta).toFixed(2)}` : `$${Number(p.precio).toFixed(2)}`) + cup;
+          })()}</td>
           <td><span class="badge ${p.stock === 0 ? 'badge--danger' : p.stock < 10 ? 'badge--warning' : 'badge--success'}">${p.stock ?? '-'}</span></td>
           <td><span class="badge ${p.activo ? 'badge--success' : 'badge--danger'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
           <td class="admin-table__actions">
@@ -164,12 +215,46 @@
     document.getElementById('btnNuevoProducto').addEventListener('click', () => openProductoModal());
 
     function productoFields(p = {}) {
+      // El admin puede escribir los precios en USD (moneda base) o directamente
+      // en CUP: al guardar, el valor en CUP se convierte a USD con la tasa del admin.
+      const rate = cupRate();
+      const canCup = rate > 0;
+      const baseCur = (bizConfig?.moneda || 'USD').toUpperCase();
+      // Moneda seleccionada para este modal (persiste entre aperturas de sesión).
+      const selCur = (canCup && modalPriceCurrency === 'CUP') ? 'CUP' : baseCur;
+
       return [
         { id: 'codigo', label: 'Código (SKU)', type: 'text', value: p.codigo || '', placeholder: 'Ej: LEG-ASTR-001' },
         { id: 'nombre', label: 'Nombre', type: 'text', required: true, value: p.nombre || '' },
         { id: 'descripcion', label: 'Descripción', type: 'textarea', value: p.descripcion || '' },
-        { id: 'precio', label: 'Precio', type: 'number', required: true, step: '0.01', min: 0, value: p.precio ?? '' },
-        { id: 'precioOferta', label: 'Precio Oferta', type: 'number', step: '0.01', min: 0, value: p.precio_oferta ?? '' },
+        {
+          id: 'precioMoneda', label: 'Moneda de los precios', type: 'select',
+          options: canCup
+            ? [{ value: baseCur, label: `${baseCur} (moneda base)` }, { value: 'CUP', label: `CUP (${fmtNum(rate)} CUP = 1 ${baseCur})` }]
+            : [{ value: baseCur, label: `${baseCur} (moneda base)` }],
+          value: selCur,
+          hint: canCup
+            ? `Puedes escribir los precios en ${baseCur} o en CUP. Se guardan en ${baseCur} usando la tasa configurada (1 ${baseCur} = ${fmtNum(rate)} CUP).`
+            : `Configura la "Tasa de cambio: CUP por 1 USD" en Configuración para poder escribir los precios también en CUP.`,
+          onChange: (values, setField) => {
+            // Al cambiar la moneda, convertir los valores ya escritos a la nueva moneda.
+            const to = values.precioMoneda === 'CUP' && canCup ? 'CUP' : baseCur;
+            if (to === modalPriceCurrency) return;
+            ['precio', 'precioOferta'].forEach(fid => {
+              const raw = values[fid];
+              if (raw === '' || raw === null || raw === undefined) return;
+              const v = parseFloat(String(raw).replace(',', '.'));
+              if (!Number.isFinite(v)) return;
+              // valor actual -> moneda base -> moneda nueva
+              const inBase = modalPriceCurrency === 'CUP' ? v / rate : v;
+              const converted = to === 'CUP' ? inBase * rate : inBase;
+              setField(fid, String(Math.round(converted * 100) / 100));
+            });
+            modalPriceCurrency = to;
+          }
+        },
+        { id: 'precio', label: 'Precio', type: 'number', required: true, step: 'any', min: 0, value: baseTo(p.precio ?? '', selCur) },
+        { id: 'precioOferta', label: 'Precio Oferta', type: 'number', step: 'any', min: 0, value: p.precio_oferta != null ? baseTo(p.precio_oferta, selCur) : '' },
         { id: 'stock', label: 'Stock', type: 'number', min: 0, value: p.stock ?? 0 },
         {
           id: 'categoriaId', label: 'Categoría', type: 'select',
@@ -215,8 +300,9 @@
         codigo: String(values.codigo || '').trim() || null,
         nombre: values.nombre.trim(),
         descripcion: values.descripcion.trim() || null,
-        precio: parseFloat(values.precio),
-        precio_oferta: values.precioOferta !== '' && values.precioOferta !== null ? parseFloat(values.precioOferta) : null,
+        // Los inputs pueden venir escritos en CUP: convertirlos a la moneda base (USD)
+        precio: toBase(values.precio, values.precioMoneda),
+        precio_oferta: values.precioOferta !== '' && values.precioOferta !== null ? toBase(values.precioOferta, values.precioMoneda) : null,
         stock: values.stock !== '' ? parseInt(values.stock, 10) : 0,
         categoria_id: values.categoriaId || null,
         destacado: !!values.destacado,
@@ -225,6 +311,10 @@
       };
 
       if (isNaN(data.precio)) return { error: 'El precio debe ser un número válido' };
+      if (data.precio_oferta !== null && isNaN(data.precio_oferta)) return { error: 'El precio de oferta debe ser un número válido' };
+      if (data.precio_oferta !== null && !(data.precio_oferta < data.precio)) {
+        return { error: 'El precio de oferta debe ser menor que el precio normal' };
+      }
 
       if (existing) {
         let { error } = await supabase.from('productos').update(data).eq('id', existing.id);
@@ -295,6 +385,8 @@
     }
 
     async function init() {
+      await loadBizConfig();
+      modalPriceCurrency = (bizConfig?.moneda || 'USD').toUpperCase();
       await loadCategorias();
       await loadProductos();
     }

@@ -357,6 +357,7 @@ export function showFormModal(options = {}) {
               <select class="form-select" id="${id}" ${req}>
                 ${(f.options || []).map(o => `<option value="${escapeHtml(String(o.value))}" ${String(o.value) === String(f.value ?? '') ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
               </select>
+              ${f.hint ? `<small style="color:#6B7280;display:block;margin-top:4px;">${escapeHtml(f.hint)}</small>` : ''}
             </div>`;
         case 'checkbox':
           return `
@@ -439,6 +440,21 @@ export function showFormModal(options = {}) {
       });
       return values;
     };
+
+    // Soporte de onChange por campo (p.ej. selector de moneda en el formulario
+    // de productos). La fn recibe (values, setField): setField(id, value)
+    // permite actualizar otros inputs del modal.
+    fields.forEach(f => {
+      if (typeof f.onChange !== 'function') return;
+      const el = modal.querySelector(`#fm_${f.id}`);
+      if (!el) return;
+      const handler = () => f.onChange(getValues(), (fid, v) => {
+        const target = modal.querySelector(`#fm_${fid}`);
+        if (target) target.value = v;
+      });
+      el.addEventListener('change', handler);
+      handler(); // estado inicial: p.ej. convertir precios a la moneda preseleccionada
+    });
 
     const validate = () => {
       for (const f of fields) {
