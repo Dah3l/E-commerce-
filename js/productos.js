@@ -235,11 +235,11 @@ export function renderProductCard(product) {
     <article class="product-card" data-product-id="${product.id}">
       <div class="product-card__image-container">
         <img 
-          src="${product.imagen_url || '/assets/icons/placeholder.svg'}" 
+          src="${product.imagen_url || './assets/icons/placeholder.svg'}" 
           alt="${escapeHtml(product.nombre)}"
           loading="lazy"
           class="product-card__image"
-          onerror="this.onerror=null; this.src='/assets/icons/placeholder.svg'"
+          onerror="this.onerror=null; this.src='./assets/icons/placeholder.svg'"
         >
         ${tieneOferta ? `
           <span class="product-card__badge product-card__badge--offer">

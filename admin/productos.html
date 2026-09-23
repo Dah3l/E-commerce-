@@ -4,24 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Productos - Panel Admin</title>
-  <link rel="stylesheet" href="/css/base.css">
-  <link rel="stylesheet" href="/css/layout.css">
-  <link rel="stylesheet" href="/css/components.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/admin.css">
 </head>
 <body>
   <div class="admin-layout">
     <aside class="admin-sidebar" id="adminSidebar">
       <div class="admin-sidebar__header">
-        <a href="/admin/dashboard.html" class="admin-sidebar__logo">🛒 Admin Panel</a>
+        <a href="./dashboard.html" class="admin-sidebar__logo">🛒 Admin Panel</a>
       </div>
       <nav class="admin-sidebar__nav">
         <ul class="admin-nav__list">
-          <li class="admin-nav__item"><a href="/admin/dashboard.html" class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
-          <li class="admin-nav__item"><a href="/admin/productos.html" class="admin-nav__link active"><span class="admin-nav__icon">📦</span>Productos</a></li>
-          <li class="admin-nav__item"><a href="/admin/categorias.html" class="admin-nav__link"><span class="admin-nav__icon">📂</span>Categorías</a></li>
-          <li class="admin-nav__item"><a href="/admin/configuracion.html" class="admin-nav__link"><span class="admin-nav__icon">⚙️</span>Configuración</a></li>
-          <li class="admin-nav__item" style="margin-top: 20px;"><a href="/" class="admin-nav__link" target="_blank"><span class="admin-nav__icon">🏪</span>Ver Tienda</a></li>
+          <li class="admin-nav__item"><a href="./dashboard.html" class="admin-nav__link"><span class="admin-nav__icon">📊</span>Dashboard</a></li>
+          <li class="admin-nav__item"><a href="./productos.html" class="admin-nav__link active"><span class="admin-nav__icon">📦</span>Productos</a></li>
+          <li class="admin-nav__item"><a href="./categorias.html" class="admin-nav__link"><span class="admin-nav__icon">📂</span>Categorías</a></li>
+          <li class="admin-nav__item"><a href="./configuracion.html" class="admin-nav__link"><span class="admin-nav__icon">⚙️</span>Configuración</a></li>
+          <li class="admin-nav__item" style="margin-top: 20px;"><a href="../" class="admin-nav__link" target="_blank"><span class="admin-nav__icon">🏪</span>Ver Tienda</a></li>
         </ul>
       </nav>
     </aside>
@@ -73,7 +73,7 @@
     import { normalizeProduct } from '../js/productos.js';
     import { clearConfigCaches } from '../js/config-negocio.js';
 
-    if (!isAuthenticated()) window.location.href = '/admin/login.html';
+    if (!isAuthenticated()) window.location.href = './login.html';
 
     document.getElementById('sidebarToggle').addEventListener('click', () => {
       document.getElementById('adminSidebar').classList.toggle('admin-sidebar--open');
@@ -132,7 +132,7 @@
         const desc = (p.descripcion || '').replace(/\s+/g, ' ').trim();
         return `
         <tr>
-          <td class="cell-img"><img src="${escapeHtml(imageUrl(p))}" alt="" loading="lazy" onerror="this.src='/assets/icons/placeholder.svg'"></td>
+          <td class="cell-img"><img src="${escapeHtml(imageUrl(p))}" alt="" loading="lazy" onerror="this.src='../assets/icons/placeholder.svg'"></td>
           <td class="cell-product">
             <div class="cell-product__name">${escapeHtml(p.nombre)}</div>
             ${desc ? `<div class="cell-product__desc" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>` : ''}
