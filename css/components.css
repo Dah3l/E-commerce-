@@ -771,6 +771,22 @@
   border-radius: var(--radius-md, 8px);
 }
 
+/* Contador de resultados bajo la barra de filtros */
+.results-count {
+  margin: calc(-1 * var(--spacing-4, 16px)) 0 var(--spacing-5, 20px);
+  font-size: 0.9rem;
+  color: var(--color-gray-600, #4B5563);
+}
+
+.results-count strong {
+  color: var(--color-gray-900, #111827);
+  font-weight: 700;
+}
+
+.sort-bar + .results-count {
+  margin-top: calc(-1 * var(--spacing-3, 12px));
+}
+
 .sort-bar__group {
   display: inline-flex;
   align-items: center;
