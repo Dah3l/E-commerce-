@@ -98,6 +98,15 @@ const grid = document.getElementById('featured-products');
 grid.classList.add('products-grid--scroll');
 }
 
+// Muestra u oculta la seccion de productos destacados segun haya busqueda activa
+function setFeaturedVisible(visible) {
+const section = document.getElementById('featured-section');
+if (section) {
+section.classList.toggle('home-featured--hidden', !visible);
+section.setAttribute('aria-hidden', String(!visible));
+}
+}
+
 let currentSearch = '';
 
 // Cargar todos los productos (con filtro opcional de categoría y búsqueda)
@@ -143,20 +152,44 @@ document.title = `${config.nombre_negocio} - Inicio`;
 }
 }
 
-// Buscador del hero: filtra el grid de productos en la misma página
+// Buscador del hero: al pulsar buscar, va directamente a los productos y
+// oculta la seccion de destacados mientras haya una busqueda activa.
 function initSearch() {
 const form = document.getElementById('searchForm');
 if (!form) return;
-form.addEventListener('submit', async (e) => {
-e.preventDefault();
 const input = form.querySelector('input[type="search"]');
-currentSearch = (input?.value || '').trim();
-if (!currentSearch) { showToast('Escribe algo para buscar', 'info'); return; }
-// desactivar filtro de categoría visualmente
+
+const runSearch = async (rawTerm) => {
+currentSearch = (rawTerm || '').trim();
+if (!currentSearch) {
+// Busqueda vacia: restaurar vista normal con destacados visibles
+setFeaturedVisible(true);
+await loadAllProducts(null);
+return;
+}
+showToast(`Resultados para "${currentSearch}"`, 'info');
+// Ocultar destacados durante la busqueda
+setFeaturedVisible(false);
+// desactivar filtro de categoria visualmente
 document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
 document.querySelector('.category-btn[data-category-id=""]')?.classList.add('category-btn--active');
 await loadAllProducts(null);
-document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
+// Ir directamente a los productos (sin pasar por destacados)
+document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+form.addEventListener('submit', async (e) => {
+e.preventDefault();
+await runSearch(input?.value);
+});
+
+// Si el usuario borra el termino, volver a mostrar los destacados
+input?.addEventListener('input', () => {
+if (!input.value.trim() && currentSearch) {
+currentSearch = '';
+setFeaturedVisible(true);
+loadAllProducts(null);
+}
 });
 }
 
