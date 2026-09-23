@@ -252,15 +252,26 @@
   transform: scale(1.05);
 }
 
-.product-card__badge {
+/* Contenedor de badges: apila OFERTA y DESTACADO sin que se solapen */
+.product-card__badges {
   position: absolute;
   top: var(--spacing-2);
   left: var(--spacing-2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-1);
+  z-index: 1;
+}
+
+.product-card__badge {
+  display: inline-block;
   padding: var(--spacing-1) var(--spacing-2);
   font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: var(--radius-sm);
-  z-index: 1;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .product-card__badge--offer {
