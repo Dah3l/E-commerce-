@@ -129,12 +129,13 @@ async function loadAllProducts() {
 const categoriaId = activeFilters.categoriaId;
 showProductSkeletons('#all-products', 6);
 const { data: featured } = await getProducts({ destacados: true, limit: 6 });
+// SIN limit: antes traia solo 24 y desaparecian productos en "Todos"
+// cuando el catalogo crecia. Ahora se carga el catalogo completo filtrado.
 let { data: products } = await getProducts({
 categoriaId,
 busqueda: currentSearch || undefined,
 orden: activeFilters.orden,
-enOferta: activeFilters.enOferta || undefined,
-limit: 24
+enOferta: activeFilters.enOferta || undefined
 });
 
 // Fallback: si la búsqueda tiene acentes y no trajo nada, reintentar sin acentos
@@ -146,8 +147,7 @@ const retry = await getProducts({
 categoriaId,
 busqueda: desaccented,
 orden: activeFilters.orden,
-enOferta: activeFilters.enOferta || undefined,
-limit: 24
+enOferta: activeFilters.enOferta || undefined
 });
 products = retry.data;
 }
