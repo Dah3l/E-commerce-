@@ -206,7 +206,7 @@ if (items.length === 0) return;
 const ids = [...new Set(items.map(i => String(i.producto_id)))];
 const missing = ids.filter(id => !productStockCache[id]);
 if (missing.length > 0) {
-const { data } = await getProducts({ limit: 1000 });
+const { data } = await getProducts(); // catalogo completo (incluye paginacion interna)
 (data || []).forEach(p => { productStockCache[String(p.id)] = p; });
 }
 // Sanear: recortar cantidades que superen el stock (p.ej. si bajó desde la última visita)

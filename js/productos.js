@@ -123,6 +123,9 @@ export async function getProducts(filters = {}) {
     query = query.gt('precio_oferta', 0);
   }
   
+  // Se guarda la cadena de busqueda saneada para reutilizarla en las paginas
+  // siguientes del recorrido completo (ver bloque de paginacion mas abajo).
+  let searchOrClause = null;
   if (filters.busqueda) {
     // Sanear: quitar caracteres que rompen el parser de filtros de PostgREST
     // (comas, paréntesis, %, y comillas dobles) y buscar por cada palabra.
@@ -136,7 +139,8 @@ export async function getProducts(filters = {}) {
       // Entre comillas dobles para que los * se interpreten como comodín
       // y no colapsen con caracteres especiales del parser.
       const conditions = searchTerms.map(term => `nombre.ilike."*${term}*"`);
-      query = query.or(conditions.join(','));
+      searchOrClause = conditions.join(',');
+      query = query.or(searchOrClause);
     }
   }
   
@@ -155,28 +159,65 @@ export async function getProducts(filters = {}) {
                  .order('created_at', { ascending: false });
   }
   
-  // Aplicar límite y offset.
-  // NOTA: con el filtro "en oferta" no conviene limitar en la BD, porque el
-  // recorte final (oferta < precio) se hace en memoria; si limitaramos aqui,
-  // podriamos quedarnos sin ofertas validas tras filtrar. Se trae una pagina
-  // mas grande y se limita al final.
+  // Paginacion / limites.
+  // OJO: antes pediamos siempre .limit(24) y por eso "desaparecian" productos
+  // en la categoria Todos cuando habia mas de 24 activos. Reglas ahora:
+  //  - offset definido  -> pagina concreta (range).
+  //  - solo limit       -> traer esa cantidad (con "en oferta" se amplía porque
+  //                        el recorte oferta < precio se hace en memoria).
+  //  - sin limit/offset -> catalogo completo paginado de 500 en 500 hasta
+  //                        cubrir `count` (PostgREST truncaria a 1000 por peto).
+  const PAGE_SIZE = 500;
   const pageLimit = filters.limit || 24;
-  if (filters.limit && !filters.enOferta) {
-    query = query.limit(filters.limit);
+
+  if (filters.offset != null) {
+    query = query.range(filters.offset, filters.offset + (pageLimit - 1));
   } else if (filters.limit && filters.enOferta) {
     query = query.limit(Math.max(pageLimit * 4, 100));
+  } else if (filters.limit) {
+    query = query.limit(filters.limit);
   }
 
-  if (filters.offset) {
-    query = query.range(filters.offset, filters.offset + (pageLimit - 1));
-  }
-  
   try {
-    const { data, error, count } = await query;
-    
+    let { data, error, count } = await query;
+
     if (error) throw error;
-    
+
     let products = (data || []).map(normalizeProduct);
+
+    // Sin limit explicito: recorrer el resto de paginas hasta tener todo.
+    if (!filters.limit && filters.offset == null && count > products.length) {
+      for (let from = products.length; from < count; from += PAGE_SIZE) {
+        const to = Math.min(from + PAGE_SIZE, count) - 1;
+        const next = await supabase
+          .from('productos')
+          .select(`
+            *,
+            categorias ( id, nombre, slug )
+          `, { count: 'exact' })
+          .eq('activo', true);
+
+        // Replicar exactamente los mismos filtros/orden de la primera query
+        if (filters.categoriaId) next.eq('categoria_id', filters.categoriaId);
+        if (filters.destacados) next.eq('destacado', true);
+        if (filters.enOferta) next.gt('precio_oferta', 0);
+        if (filters.busqueda && searchOrClause) next.or(searchOrClause);
+        if (orden === 'precio-asc' || orden === 'precio-desc') {
+          next.order('precio', { ascending: orden === 'precio-asc' });
+        } else if (orden === 'nuevos') {
+          next.order('created_at', { ascending: false });
+        } else {
+          next.order('destacado', { ascending: false })
+              .order('created_at', { ascending: false });
+        }
+
+        const { data: moreData, error: moreError } = await next.range(from, to);
+        if (moreError) throw moreError;
+        const extra = (moreData || []).map(normalizeProduct);
+        if (!extra.length) break; // seguridad contra bucles infinitos
+        products = products.concat(extra);
+      }
+    }
 
     // Filtro "en oferta" (2a parte): la oferta solo cuenta si es menor al
     // precio normal. Se hace en memoria porque PostgREST no compara columnas.
@@ -184,7 +225,9 @@ export async function getProducts(filters = {}) {
       products = products.filter(p => p.precio_oferta && p.precio_oferta < p.precio);
     }
 
-    // Reordenar en memoria por precio efectivo (oferta si existe, si no precio normal)
+    // Reordenar en memoria por precio efectivo (oferta si existe, si no precio
+    // normal). Con "todos" se traen todas las paginas, asi que este orden es
+    // global y correcto; ademas cubre los casos en oferta + precio combinados.
     if (orden === 'precio-asc' || orden === 'precio-desc') {
       const dir = orden === 'precio-asc' ? 1 : -1;
       const effective = (p) => (p.precio_oferta && p.precio_oferta < p.precio ? p.precio_oferta : p.precio);
