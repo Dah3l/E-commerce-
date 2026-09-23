@@ -48,6 +48,16 @@ img.onerror = () => { img.src = './assets/icons/placeholder.svg'; };
 document.getElementById('pdpTitle').textContent = p.nombre;
 document.getElementById('pdpDescription').textContent = p.descripcion || '';
 
+// Código (SKU) configurado en el panel de administración
+const codeEl = document.getElementById('pdpCode');
+if (p.codigo) {
+  codeEl.textContent = `Código: ${p.codigo}`;
+  codeEl.style.display = 'block';
+} else {
+  codeEl.textContent = '';
+  codeEl.style.display = 'none';
+}
+
 const tieneOferta = p.precio_oferta && p.precio_oferta < p.precio;
 const final = tieneOferta ? p.precio_oferta : p.precio;
 document.getElementById('pdpPrice').textContent = formatPrice(final, currency);

@@ -91,7 +91,8 @@ export async function getProductBySlug(categoriaSlug, productoSlug) {
  * @param {number} filters.offset - Offset para paginación
  * @returns {Promise<{data: Array, count: number}>}
  */
-export async function getProducts(filters = {}) {
+export async function getProducts(filtersParam = {}) {
+  let filters = filtersParam;
   let query = supabase
     .from('productos')
     .select(`
@@ -138,7 +139,9 @@ export async function getProducts(filters = {}) {
       const searchTerms = clean.split(/\s+/).filter(t => t.length > 0);
       // Entre comillas dobles para que los * se interpreten como comodín
       // y no colapsen con caracteres especiales del parser.
-      const conditions = searchTerms.map(term => `nombre.ilike."*${term}*"`);
+      // Se busca tanto por nombre como por el código (SKU) del admin; si la
+      // columna codigo aún no existe en la BD, se reintenta solo por nombre abajo.
+      const conditions = searchTerms.flatMap(term => [`nombre.ilike."*${term}*"`, `codigo.ilike."*${term}*"`]);
       searchOrClause = conditions.join(',');
       query = query.or(searchOrClause);
     }
@@ -186,6 +189,46 @@ export async function getProducts(filters = {}) {
 
   try {
     let { data, error, count } = await query;
+
+    // Compatibilidad: si la columna "codigo" aun no existe en la BD (no se ha
+    // ejecutado la migracion), PostgREST falla al filtrar/ordenar por ella.
+    // Reintentamos sin "codigo": busqueda solo por nombre y sin paginacion extra.
+    if (error && /codigo/i.test(error.message || '')) {
+      console.warn('La columna "codigo" no existe en productos todavia. Ejecuta la migracion SQL. Reintentando sin codigo...');
+      searchOrClause = null;
+      const clean = String(filters.busqueda || '')
+        .replace(/[(),"%\\]/g, ' ')
+        .replace(/[^\p{L}\p{N}\s._-]/gu, '')
+        .toLowerCase().trim();
+      const nameOnlyClause = clean
+        ? clean.split(/\s+/).filter(Boolean).map(term => `nombre.ilike."*${term}*"`).join(',')
+        : null;
+      const base = () => supabase
+        .from('productos')
+        .select(`\n          *,\n          categorias ( id, nombre, slug )\n        `, { count: 'exact' })
+        .eq('activo', true);
+      let q2 = base();
+      if (filters.categoriaId) q2 = q2.eq('categoria_id', filters.categoriaId);
+      if (filters.destacados) q2 = q2.eq('destacado', true);
+      if (filters.enOferta) q2 = q2.gt('precio_oferta', 0);
+      if (nameOnlyClause) q2 = q2.or(nameOnlyClause);
+      if (orden === 'precio-asc' || orden === 'precio-desc') {
+        q2 = q2.order('precio', { ascending: orden === 'precio-asc' });
+      } else if (orden === 'nuevos') {
+        q2 = q2.order('created_at', { ascending: false });
+      } else {
+        q2 = q2.order('destacado', { ascending: false }).order('created_at', { ascending: false });
+      }
+      if (filters.offset != null) {
+        q2 = q2.range(filters.offset, filters.offset + ((filters.limit ?? 24) - 1));
+      } else if (filters.limit) {
+        q2 = q2.limit(filters.limit);
+      }
+      const r = await q2;
+      data = r.data; error = r.error; count = r.count;
+      // Evitar el recorrido de paginas extra (que volveria a usar el filtro roto)
+      filters = { ...filters, limit: filters.limit ?? 1000 };
+    }
 
     if (error) throw error;
 
@@ -352,6 +395,7 @@ export function renderProductCard(product) {
       </div>
       
       <div class="product-card__info">
+        ${product.codigo ? `<div class="product-card__code">Código: ${escapeHtml(String(product.codigo))}</div>` : ''}
         <h3 class="product-card__title">${escapeHtml(product.nombre)}</h3>
         
         <div class="product-card__price">

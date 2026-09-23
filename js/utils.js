@@ -14,11 +14,26 @@ import { DEFAULT_CURRENCY } from './config.js';
 export function formatPrice(amount, currency = DEFAULT_CURRENCY) {
   if (amount === null || amount === undefined) return '';
   
-  return new Intl.NumberFormat('es-US', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2
-  }).format(amount);
+  // Normalizar codigo de moneda: debe ser ISO de 3 letras (USD, COP, MXN...).
+  // Si el admin configuro algo invalido (simbolo "$", texto libre, etc.)
+  // se cae al default para evitar que Intl lance RangeError.
+  let code = String(currency || DEFAULT_CURRENCY).trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(code)) code = DEFAULT_CURRENCY;
+
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 2
+    }).format(amount);
+  } catch (_) {
+    // Moneda con formato ISO valido pero inexistente (ej: "ABC")
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: DEFAULT_CURRENCY,
+      minimumFractionDigits: 2
+    }).format(amount);
+  }
 }
 
 /**

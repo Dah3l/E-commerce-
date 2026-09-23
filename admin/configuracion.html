@@ -42,7 +42,7 @@
             <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="email"></div>
             <div class="form-group"><label class="form-label">Dirección</label><input type="text" class="form-input" id="direccion"></div>
             <div class="form-group"><label class="form-label">Horario</label><input type="text" class="form-input" id="horario"></div>
-            <div class="form-group"><label class="form-label">Moneda</label><input type="text" class="form-input" id="moneda" placeholder="USD"></div>
+            <div class="form-group"><label class="form-label">Moneda</label><input type="text" class="form-input" id="moneda" placeholder="USD" maxlength="3" style="text-transform:uppercase"><small class="form-hint" style="display:block;color:#6B7280;font-size:12px;margin-top:4px;">Código ISO de 3 letras: USD, COP, MXN, ARS, PEN, EUR...</small></div>
             <button type="submit" class="btn btn--primary">Guardar Configuración</button>
           </form>
         </div>
@@ -98,7 +98,14 @@
         email: document.getElementById('email').value,
         direccion: document.getElementById('direccion').value,
         horario: document.getElementById('horario').value,
-        moneda: document.getElementById('moneda').value,
+        moneda: (() => {
+          const m = document.getElementById('moneda').value.trim().toUpperCase();
+          if (m && !/^[A-Z]{3}$/.test(m)) {
+            showToast('La moneda debe ser un código ISO de 3 letras (ej: USD, COP)', 'error');
+            throw new Error('moneda_invalida');
+          }
+          return m || 'USD';
+        })(),
         updated_at: new Date().toISOString()
       };
       let result = await supabase.from('config_negocio').upsert({ id: 1, ...data });

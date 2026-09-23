@@ -304,6 +304,13 @@
   flex: 1;
 }
 
+.product-card__code {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-gray-500);
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
+
 .product-card__title {
   font-size: var(--font-size-base);
   font-weight: 600;
