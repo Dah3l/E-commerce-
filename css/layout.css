@@ -7,12 +7,30 @@
    HEADER / NAVEGACIÓN
    ============================================ */
 .site-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-sticky);
   background-color: var(--color-white);
   box-shadow: var(--shadow-sm);
   border-bottom: 1px solid var(--color-gray-200);
+  transition: transform var(--transition-base);
+  will-change: transform;
+}
+
+/* Header "inteligente": se desliza fuera de pantalla al scrollear hacia
+   abajo y vuelve a aparecer de inmediato al scrollear hacia arriba, de modo
+   que el acceso al carrito esté siempre disponible (ver initHeaderAutoHide
+   en js/ui.js). */
+.site-header--hidden {
+  transform: translateY(-100%);
+}
+
+/* Compensar la altura del header fijo para que el contenido no quede
+   debajo. El valor real de la altura se fija por JS (--header-h). */
+body {
+  padding-top: var(--header-h, 68px);
 }
 
 .header-main {
@@ -547,9 +565,8 @@
    MENÚ MÓVIL EN DESKTOP: desplegable bajo la hamburguesa
    ============================================ */
 @media (min-width: 1024px) {
-  .site-header {
-    position: relative;
-  }
+  /* El header es fixed en todas las vistas; el menu desktop se muestra
+     como barra y la hamburguesa abre un desplegable anclado al header. */
   .hamburger-btn {
     display: flex;
     order: 3; /* a la derecha del icono del carrito */
