@@ -1,7 +1,7 @@
 import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGrid, setCurrency } from '../productos.js';
 import { addToCart, getCart } from '../carrito.js';
 import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
-import { formatPrice, getUrlParam } from '../utils.js';
+import { formatPrice, getUrlParam, formatPlainText } from '../utils.js';
 import { getBizConfig, getCurrency, getWhatsAppNumber } from '../config-negocio.js';
 
 // El header se inyecta en init() con el nombre real del negocio
@@ -46,7 +46,14 @@ img.alt = p.nombre;
 img.onerror = () => { img.src = './assets/icons/placeholder.svg'; };
 
 document.getElementById('pdpTitle').textContent = p.nombre;
-document.getElementById('pdpDescription').textContent = p.descripcion || '';
+// La descripción conserva su formato: saltos de línea y párrafos del texto escrito en el admin
+const descEl = document.getElementById('pdpDescription');
+const descHtml = formatPlainText(p.descripcion || '');
+if (descHtml) {
+  descEl.innerHTML = descHtml;
+} else {
+  descEl.textContent = '';
+}
 
 // Código (SKU) configurado en el panel de administración
 const codeEl = document.getElementById('pdpCode');

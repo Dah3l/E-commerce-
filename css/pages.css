@@ -537,8 +537,17 @@
   font-size: var(--font-size-base);
   font-weight: 400;
   color: var(--color-gray-600);
-  line-height: 1.6;
+  line-height: 1.7;
   margin: 0;
+  white-space: pre-line; /* respeta los saltos de línea escritos en el admin */
+}
+
+.product-detail__description p {
+  margin: 0 0 var(--spacing-3);
+}
+
+.product-detail__description p:last-child {
+  margin-bottom: 0;
 }
 
 .badge--offer {
