@@ -198,6 +198,27 @@ export function escapeHtml(text) {
 }
 
 /**
+ * Convierte texto plano en HTML seguro preservando su formato:
+ * - Los saltos de línea simples se respetan (se convierten en <br>).
+ * - Los párrafos (separados por doble salto de línea) se envuelven en <p>.
+ * Todo el contenido se escapa primero, por lo que es seguro insertarlo con innerHTML.
+ * @param {string} text - Texto plano (posible multilinea)
+ * @returns {string} HTML escapado y formateado
+ */
+export function formatPlainText(text) {
+  if (!text || !String(text).trim()) return '';
+
+  const escaped = escapeHtml(String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n')).replace(/\n/g, '<br>');
+  // Separar párrafos (doble salto de línea) en bloques <p>
+  return escaped
+    .split(/(?:<br>\s*){2,}/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p>${p}</p>`)
+    .join('');
+}
+
+/**
  * Copia texto al portapapeles
  * @param {string} text - Texto a copiar
  * @returns {Promise<boolean>} True si se copiÃ³ exitosamente
