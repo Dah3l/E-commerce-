@@ -49,11 +49,17 @@ export function formatPrice(amount, fallbackCurrency = DEFAULT_CURRENCY) {
 
 /**
  * Garantiza que el precio formateado muestre tambien el codigo ISO de la
- * moneda (ej: "$1.99" -> "$1.99 USD"), sin duplicarlo si Intl ya lo incluyo.
+ * moneda DETRAS del importe (formato correcto: "100 CUP", no "CUP 100").
+ * Si Intl ya incluyo el codigo delante (p. ej. "CUP 100,00"), se reordena
+ * colocando primero el simbolo y despues el codigo: "$100.00 CUP".
  */
 function withCurrencyCode(formatted, code) {
-  if (!formatted.includes(code)) formatted = `${formatted} ${code}`;
-  return formatted;
+  // Quitar el codigo ISO si Intl lo puso pegado al numero (delante o detras)
+  const stripped = formatted
+    .replace(new RegExp(`\\s*${code}\\s*`, 'g'), ' ')
+    .trim();
+  // Reconstruir: importe con simbolo + codigo ISO al final (ej: "$100.00 CUP")
+  return `${stripped} ${code}`;
 }
 
 /**

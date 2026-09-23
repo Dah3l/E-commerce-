@@ -3,7 +3,7 @@ import { addToCart, getCart } from '../carrito.js';
 import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { formatPrice, getUrlParam, formatPlainText } from '../utils.js';
 import { getBizConfig, getCurrency, getWhatsAppNumber, getCupRate } from '../config-negocio.js';
-import { setBaseCurrency, setCupRate, refreshPriceElements } from '../moneda.js';
+import { setBaseCurrency, setCupRate, refreshPriceElements, formatUsd, formatCup } from '../moneda.js';
 
 // El header se inyecta en init() con el nombre real del negocio
 initScrollTopButton();
@@ -215,10 +215,15 @@ if (!phone) {
 showToast('El número de WhatsApp no está configurado', 'error');
 return;
 }
-const total = formatPrice((product.precio_oferta || product.precio) * qty(), currency);
+const unitPrice = Number(product.precio_oferta || product.precio) || 0;
+const totalUsd = formatUsd(unitPrice * qty());
+const totalCup = formatCup(unitPrice * qty());
+// Total mostrado en ambas monedas (USD y CUP) cuando hay tasa configurada
+const total = totalCup ? `${totalUsd} ≈ ${totalCup}` : totalUsd;
 const msg = [
 `¡Hola${bizConfig.nombre_negocio ? ' ' + bizConfig.nombre_negocio : ''}! 👋`,
 `Quiero comprar: *${qty()} x ${product.nombre}*`,
+`Precio unitario: ${formatUsd(unitPrice)}${(() => { const c = formatCup(unitPrice); return c ? ' ≈ ' + c : ''; })()}`,
 `Total: ${total}`,
 '',
 `${window.location.origin}${window.location.pathname.replace('[^/]*$','')}producto.html?id=${product.id}`

@@ -99,6 +99,39 @@ export function convertAmount(amount) {
 }
 
 /**
+ * Formatea un importe en una moneda concreta, con el codigo ISO detras del
+ * numero (formato correcto: "100 CUP", nunca "CUP 100"). Si la moneda no es
+ * valida para Intl, se muestra solo el numero + codigo.
+ * @param {number} value - importe ya convertido a esa moneda
+ * @param {string} code - 'USD' | 'CUP' | otra ISO de 3 letras
+ * @param {Intl.NumberFormatOptions} opts - opciones extra de formato
+ * @returns {string}
+ */
+export function formatInCurrency(value, code, opts = {}) {
+  const isCup = code === 'CUP';
+  let formatted;
+  try {
+    formatted = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: isCup ? 0 : 2,
+      maximumFractionDigits: isCup ? 0 : (opts.maximumFractionDigits ?? 2),
+      ...opts
+    }).format(value);
+  } catch (_) {
+    // Moneda invalida para Intl: mostrar numero + codigo
+    return `${value} ${code}`;
+  }
+  // Reordenar si Intl puso el codigo delante ("CUP 100" -> "$100 CUP")
+  if (formatted.includes(code)) {
+    formatted = formatted
+      .replace(new RegExp(`\\s*${code}\\s*`, 'g'), ' ')
+      .trim();
+  }
+  return `${formatted} ${code}`;
+}
+
+/**
  * Importe convertido formateado como texto (para totales de WhatsApp etc.)
  * @param {number} amount - importe en moneda base
  * @param {Intl.NumberFormatOptions} opts - opciones extra de formato
@@ -107,17 +140,32 @@ export function convertAmount(amount) {
 export function formatConverted(amount, opts = {}) {
   const code = getActiveCurrency();
   const value = convertAmount(amount);
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: code === 'CUP' ? 0 : 2,
-      maximumFractionDigits: code === 'CUP' ? 0 : (opts.maximumFractionDigits ?? 2),
-      ...opts
-    }).format(value);
-  } catch (_) {
-    return `${value}`;
-  }
+  return formatInCurrency(value, code, opts);
+}
+
+/**
+ * Convierte un importe de la moneda base a USD y lo formatea ("$5.00 USD").
+ * Util para mostrar ambos precios (USD y CUP) en los mensajes de WhatsApp.
+ * @param {number} amount - importe en la moneda base (USD)
+ * @param {Intl.NumberFormatOptions} opts - opciones extra de formato
+ * @returns {string}
+ */
+export function formatUsd(amount, opts = {}) {
+  return formatInCurrency(Number(amount) || 0, 'USD', opts);
+}
+
+/**
+ * Convierte un importe de la moneda base a CUP usando la tasa del admin y
+ * lo formatea con el codigo detras ("3,500 CUP"). Devuelve null si la tasa
+ * no esta configurada (no se puede convertir).
+ * @param {number} amount - importe en la moneda base (USD)
+ * @param {Intl.NumberFormatOptions} opts - opciones extra de formato
+ * @returns {string|null}
+ */
+export function formatCup(amount, opts = {}) {
+  if (!hasCupRate()) return null;
+  const value = Math.round((Number(amount) || 0) * cupRate);
+  return formatInCurrency(value, 'CUP', opts);
 }
 
 /**

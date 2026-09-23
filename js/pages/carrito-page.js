@@ -10,7 +10,7 @@ return parseInt(p.stock, 10);
 import { formatPrice, escapeHtml } from '../utils.js';
 import { showToast, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { getBizConfig, getWhatsAppNumber, getCurrency, getCupRate } from '../config-negocio.js';
-import { setBaseCurrency, setCupRate, refreshPriceElements } from '../moneda.js';
+import { setBaseCurrency, setCupRate, refreshPriceElements, formatUsd, formatCup } from '../moneda.js';
 import { getProducts, normalizeProduct, setCurrency, renderProductsGrid } from '../productos.js';
 
 // El header se inyecta en init() con el nombre real del negocio
@@ -123,13 +123,18 @@ showToast('El número de WhatsApp no está configurado en la tienda', 'error');
 return;
 }
 
-const cur = getCurrency(config);
+// Precio en ambas monedas para el mensaje de WhatsApp (USD y CUP)
+const dualPrice = (amount) => {
+const usd = formatUsd(amount);
+const cup = formatCup(amount);
+return cup ? `${usd} ≈ ${cup}` : usd;
+};
 const lines = [
 `¡Hola${config.nombre_negocio ? ' ' + config.nombre_negocio : ''}! 👋 Quiero hacer este pedido:`,
 '',
-...items.map(i => `• ${i.cantidad} x ${i.nombre} — ${formatPrice(Number(i.precio) * (parseInt(i.cantidad, 10) || 1), cur)}`),
+...items.map(i => `• ${i.cantidad} x ${i.nombre} — ${dualPrice(Number(i.precio) * (parseInt(i.cantidad, 10) || 1))}`),
 '',
-`*Total: ${formatPrice(getCartSubtotal(), cur)}*`
+`*Total: ${dualPrice(getCartSubtotal())}*`
 ];
 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
 });
