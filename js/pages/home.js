@@ -20,6 +20,15 @@ const activeFilters = {
   enOferta: false,     // solo productos con oferta
 };
 
+// ---- Paginación de "Todos los Productos" ----
+// Se cargan solo PAGE_SIZE (20) productos por página: nada de scroll infinito.
+const PAGE_SIZE = 20;
+const paginationState = {
+  page: 1,        // página actual (1-based)
+  totalPages: 1,  // total de páginas del resultado filtrado
+  total: 0,       // total de productos que coinciden con búsqueda/filtros
+};
+
 // Delegación de eventos: botones "Añadir al carrito" + navegación a detalle
 document.addEventListener('click', (e) => {
 const btn = e.target.closest('[data-add-to-cart]');
@@ -77,6 +86,7 @@ btn.classList.add('category-btn--active');
 
 const categoryId = btn.dataset.categoryId;
 activeFilters.categoriaId = categoryId || null;
+paginationState.page = 1; // al cambiar de categoria, volver a la primera pagina
 await loadAllProducts();
 });
 }
@@ -135,40 +145,107 @@ return;
 }
 const plural = (n) => n === 1 ? 'producto' : 'productos';
 if (currentSearch) {
-// Busqueda activa: cantidad de coincidencias
+// Busqueda activa: cantidad de coincidencias (ahora paginadas)
 el.innerHTML = `<strong>${shown}</strong> ${plural(shown)} para "${currentSearch}"`;
 } else if (hasFilters) {
 // Filtros activos (ofertas y/o categoria): mostrados vs. total del catalogo
 el.innerHTML = `<strong>${shown}</strong> ${plural(shown)}${shown !== total ? ` de ${total}` : ''} filtrado${shown === 1 ? '' : 's'}`;
 } else {
-el.innerHTML = `Mostrando <strong>${shown}</strong> ${plural(shown)}`;
+el.innerHTML = `Mostrando <strong>${shown}</strong> ${plural(shown)}${paginationState.totalPages > 1 ? ` de ${total}` : ''}`;
+}
+// Rango visible actual, util con paginacion (ej. "Pagina 2 de 5")
+if (paginationState.totalPages > 1) {
+el.innerHTML += ` &middot; P&aacute;gina <strong>${paginationState.page}</strong> de ${paginationState.totalPages}`;
 }
 }
 
-// Cargar todos los productos (respeta categoria, busqueda y filtros de orden/oferta)
-async function loadAllProducts() {
+// Renderiza los botones de paginacion debajo del grid. Se oculta si solo hay
+// una pagina (no tiene sentido mostrar controles cuando caben los 20).
+function renderPagination() {
+const nav = document.getElementById('pagination');
+if (!nav) return;
+
+const { page, totalPages } = paginationState;
+if (totalPages <= 1) {
+nav.hidden = true;
+nav.innerHTML = '';
+return;
+}
+nav.hidden = false;
+
+const btn = (label, target, opts = {}) => {
+const disabled = opts.disabled ? ' disabled' : '';
+const currentClass = opts.current ? ' pagination__btn--current' : '';
+const ariaCurrent = opts.current ? ' aria-current="page"' : '';
+const extraClass = opts.className ? ` ${opts.className}` : '';
+const aria = opts.aria ? ` aria-label="${opts.aria}"` : '';
+return `<button type="button" class="pagination__btn${extraClass}${currentClass}" data-page="${target}"${disabled}${ariaCurrent}${aria}>${label}</button>`;
+};
+
+// Ventana de numeros alrededor de la pagina actual (1 ... 4 5 6 ... 12)
+const pages = [];
+const add = (p) => { if (!pages.includes(p) && p >= 1 && p <= totalPages) pages.push(p); };
+add(1); add(2);
+for (let p = page - 1; p <= page + 1; p++) add(p);
+add(totalPages - 1); add(totalPages);
+pages.sort((a, b) => a - b);
+
+let html = btn('&laquo;', page - 1, { disabled: page <= 1, className: 'pagination__btn--prev', aria: 'Página anterior' });
+let prevNum = 0;
+for (const p of pages) {
+if (prevNum && p - prevNum > 1) html += `<span class="pagination__ellipsis" aria-hidden="true">&hellip;</span>`;
+html += btn(String(p), p, { current: p === page, aria: `Ir a la página ${p}` });
+prevNum = p;
+}
+html += btn('&raquo;', page + 1, { disabled: page >= totalPages, className: 'pagination__btn--next', aria: 'Página siguiente' });
+nav.innerHTML = html;
+}
+
+// Delegacion de clics de la paginacion (una sola vez, el nav persiste en el DOM)
+function initPagination() {
+const nav = document.getElementById('pagination');
+if (!nav || nav.dataset.bound) return;
+nav.dataset.bound = '1';
+nav.addEventListener('click', async (e) => {
+const btn = e.target.closest('.pagination__btn[data-page]');
+if (!btn || btn.disabled) return;
+const target = parseInt(btn.dataset.page, 10);
+if (!Number.isFinite(target) || target < 1 || target > paginationState.totalPages || target === paginationState.page) return;
+paginationState.page = target;
+await loadAllProducts();
+document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+}
+
+// Cargar una pagina de "Todos los Productos" (respeta categoria, busqueda,
+// filtros de orden/oferta y la pagina actual). Solo PAGE_SIZE (20) por carga.
+async function loadAllProducts(options = {}) {
 const categoriaId = activeFilters.categoriaId;
-showProductSkeletons('#all-products', 6);
+showProductSkeletons('#all-products', Math.min(PAGE_SIZE, 8));
 const { data: featured } = await getProducts({ destacados: true, limit: 6 });
-// SIN limit: antes traia solo 24 y desaparecian productos en "Todos"
-// cuando el catalogo crecia. Ahora se carga el catalogo completo filtrado.
+
+// Pagina concreta: offset + limit (paginacion real en la BD, sin scroll infinito)
 let { data: products, count: filteredCount } = await getProducts({
 categoriaId,
 busqueda: currentSearch || undefined,
 orden: activeFilters.orden,
-enOferta: activeFilters.enOferta || undefined
+enOferta: activeFilters.enOferta || undefined,
+limit: PAGE_SIZE,
+offset: (paginationState.page - 1) * PAGE_SIZE
 });
 
 // Fallback: si la búsqueda tiene acentes y no trajo nada, reintentar sin acentos
 // (cubre productos guardados como "arroz" cuando el usuario escribe "aróz", etc.)
-if (currentSearch && products.length === 0) {
+if (currentSearch && products.length === 0 && paginationState.page === 1) {
 const desaccented = currentSearch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 if (desaccented !== currentSearch) {
 const retry = await getProducts({
 categoriaId,
 busqueda: desaccented,
 orden: activeFilters.orden,
-enOferta: activeFilters.enOferta || undefined
+enOferta: activeFilters.enOferta || undefined,
+limit: PAGE_SIZE,
+offset: 0
 });
 products = retry.data;
 filteredCount = retry.count;
@@ -182,10 +259,29 @@ if (currentSearch || activeFilters.enOferta || categoriaId) {
 const { count } = await getProducts({ limit: 0 });
 if (count) totalCount = count;
 }
-// Con "solo ofertas" el recorte oferta < precio se hace en memoria, asi que
-// el count real mostrado es la longitud final tras filtrar.
-const shownCount = activeFilters.enOferta ? products.length : (filteredCount || products.length);
-updateResultsCount(shownCount, totalCount, Boolean(activeFilters.enOferta || categoriaId));
+
+// Total filtrado -> cantidad de paginas. El count de PostgREST es exacto
+// salvo con "solo ofertas" (el recorte oferta < precio se hace en memoria y
+// sobreestima): en ese caso aproximamos con lo traido + una fila extra si la
+// pagina venia llena, para seguir ofreciendo el boton "siguiente".
+let effectiveTotal = filteredCount || products.length;
+if (activeFilters.enOferta) {
+effectiveTotal = (paginationState.page - 1) * PAGE_SIZE + products.length;
+if (products.length === PAGE_SIZE) effectiveTotal += 1;
+}
+
+paginationState.totalPages = Math.max(1, Math.ceil(effectiveTotal / PAGE_SIZE));
+if (paginationState.page > paginationState.totalPages) {
+// Si la pagina pedida quedo fuera (p.ej. cambiaron los filtros), ir a la ultima valida
+paginationState.page = paginationState.totalPages;
+await loadAllProducts(options);
+return;
+}
+
+// Mostrar la pagina cargada
+const shownFrom = products.length ? (paginationState.page - 1) * PAGE_SIZE + 1 : 0;
+const shownTo = (paginationState.page - 1) * PAGE_SIZE + products.length;
+updateResultsCount(products.length ? `${shownFrom}\u2013${shownTo}` : 0, totalCount, Boolean(activeFilters.enOferta || categoriaId));
 
 // Combinar sin duplicados para que el botón de cualquier card funcione
 const merged = [...featured];
@@ -197,6 +293,7 @@ renderProductsGrid(products, '#all-products');
 if (products.length === 0) {
 document.getElementById('all-products').innerHTML = `<p style="grid-column: 1 / -1; text-align:center; color:#6B7280; padding: 24px;">${currentSearch ? `No encontramos productos para "${currentSearch}".` : 'No hay productos en esta categoría.'}</p>`;
 }
+renderPagination();
 }
 
 // Aplica datos del negocio (nombre, moneda, contacto) e inyecta el header
@@ -255,6 +352,7 @@ const input = form.querySelector('input[type="search"]');
 
 const runSearch = async (rawTerm) => {
 currentSearch = (rawTerm || '').trim();
+paginationState.page = 1; // toda busqueda nueva empieza en la pagina 1
 if (!currentSearch) {
 // Busqueda vacia: restaurar vista normal con destacados visibles
 setFeaturedVisible(true);
@@ -346,6 +444,7 @@ if (!bar) return;
 const sortSelect = bar.querySelector('#product-sort');
 sortSelect?.addEventListener('change', () => {
 activeFilters.orden = sortSelect.value || 'relevancia';
+paginationState.page = 1; // cambiar el orden reinicia la paginacion
 loadAllProducts();
 });
 
@@ -354,6 +453,7 @@ const offerToggle = bar.querySelector('#only-offers');
 offerToggle?.addEventListener('change', () => {
 activeFilters.enOferta = offerToggle.checked;
 bar.classList.toggle('sort-bar--offers-active', offerToggle.checked);
+paginationState.page = 1; // cambiar filtros reinicia la paginacion
 loadAllProducts();
 });
 }
@@ -375,6 +475,7 @@ try {
 await applyBizConfig();
 initSearch();
 initSortBar();
+initPagination();
 await loadCategories();
 
 // Soporte para /?categoria=slug (enlaces desde breadcrumb del detalle de producto)
