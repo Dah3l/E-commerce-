@@ -92,44 +92,23 @@ export async function getProductBySlug(categoriaSlug, productoSlug) {
  * @returns {Promise<{data: Array, count: number}>}
  */
 export async function getProducts(filtersParam = {}) {
-  let filters = filtersParam;
-  let query = supabase
-    .from('productos')
-    .select(`
-      *,
-      categorias (
-        id,
-        nombre,
-        slug
-      )
-    `, { count: 'exact' })
-    .eq('activo', true);
-  
-  // Aplicar filtros
-  if (filters.categoriaId) {
-    query = query.eq('categoria_id', filters.categoriaId);
-  }
-  
-  if (filters.destacados) {
-    query = query.eq('destacado', true);
-  }
+  const filters = filtersParam;
 
-  // Filtro "en oferta": solo productos con precio de oferta valido.
-  // OJO: antes usabamos .lt('precio_oferta', 'precio'), pero PostgREST intenta
-  // parsear "precio" como numero y devuelve error 22P02 (invalid input syntax
-  // for type numeric), por eso el toggle no mostraba nada. Como no se pueden
-  // comparar dos columnas en la query, aqui solo pedimos ofertas > 0 y la
-  // comprobacion final (oferta < precio normal) se hace en memoria abajo.
-  if (filters.enOferta) {
-    query = query.gt('precio_oferta', 0);
-  }
-  
-  // Se guarda la cadena de busqueda saneada para reutilizarla en las paginas
-  // siguientes del recorrido completo (ver bloque de paginacion mas abajo).
-  let searchOrClause = null;
+  // Orden segun el filtro elegido (por defecto: destacados primero, luego recientes).
+  // OJO con precio-asc/desc: el precio EFECTIVO es precio_oferta si existe y es
+  // menor que precio; eso no se puede ordenar en PostgREST (no compara columnas),
+  // por lo que al paginar por precio se carga el catalogo filtrado completo
+  // (en bloques de PAGE_SIZE) y se corta la pagina pedida en memoria.
+  const orden = filters.orden || 'relevancia';
+  const byEffectivePrice = orden === 'precio-asc' || orden === 'precio-desc';
+
+  // Busqueda saneada: quitar caracteres que rompen el parser de filtros de
+  // PostgREST (comas, parentesis, %, comillas) y buscar por cada palabra,
+  // tanto por nombre como por el codigo (SKU) del admin. La clausula se
+  // reutiliza en las paginas siguientes del recorrido (ver buildFilteredQuery).
+  let searchOrClause = null;      // nombre + codigo
+  let searchOrClauseNameOnly = null; // solo nombre (fallback sin columna codigo)
   if (filters.busqueda) {
-    // Sanear: quitar caracteres que rompen el parser de filtros de PostgREST
-    // (comas, paréntesis, %, y comillas dobles) y buscar por cada palabra.
     const clean = String(filters.busqueda)
       .replace(/[(),"%\\]/g, ' ')
       .replace(/[^\p{L}\p{N}\s._-]/gu, '')
@@ -137,130 +116,114 @@ export async function getProducts(filtersParam = {}) {
       .trim();
     if (clean) {
       const searchTerms = clean.split(/\s+/).filter(t => t.length > 0);
-      // Entre comillas dobles para que los * se interpreten como comodín
-      // y no colapsen con caracteres especiales del parser.
-      // Se busca tanto por nombre como por el código (SKU) del admin; si la
-      // columna codigo aún no existe en la BD, se reintenta solo por nombre abajo.
-      const conditions = searchTerms.flatMap(term => [`nombre.ilike."*${term}*"`, `codigo.ilike."*${term}*"`]);
-      searchOrClause = conditions.join(',');
-      query = query.or(searchOrClause);
+      // Entre comillas dobles para que los * se interpreten como comodin
+      searchOrClause = searchTerms
+        .flatMap(term => [`nombre.ilike."*${term}*"`, `codigo.ilike."*${term}*"`])
+        .join(',');
+      searchOrClauseNameOnly = searchTerms
+        .map(term => `nombre.ilike."*${term}*"`)
+        .join(',');
     }
   }
-  
-  // Orden segun el filtro elegido (por defecto: destacados primero, luego recientes)
-  const orden = filters.orden || 'relevancia';
-  if (orden === 'precio-asc' || orden === 'precio-desc') {
-    // El precio efectivo es precio_oferta si existe, si no precio normal.
-    // Primero se pide a la BD por precio normal y luego se reordena en memoria
-    // por el precio efectivo (los sets de prueba son pequenos; con paginacion
-    // grande esto seguiria siendo correcto dentro de la pagina cargada).
-    query = query.order('precio', { ascending: orden === 'precio-asc' });
-  } else if (orden === 'nuevos') {
-    query = query.order('created_at', { ascending: false });
-  } else {
-    query = query.order('destacado', { ascending: false })
-                 .order('created_at', { ascending: false });
-  }
-  
-  // Paginacion / limites.
-  // OJO: antes pediamos siempre .limit(24) y por eso "desaparecian" productos
-  // en la categoria Todos cuando habia mas de 24 activos. Reglas ahora:
-  //  - offset definido  -> pagina concreta (range).
-  //  - solo limit       -> traer esa cantidad (con "en oferta" se amplía porque
-  //                        el recorte oferta < precio se hace en memoria).
+
+  // Paginacion / limites: los parametros fisicos (rango/limite reales de la
+  // query) se resuelven ANTES de construir la peticion, porque con "solo
+  // ofertas" el recorte oferta < precio se hace en memoria y habria que
+  // ampliar/recorrer rangos para completar cada pagina logica. Reglas:
+  //  - offset definido  -> pagina concreta (range). Con "en oferta" se usan
+  //                        rangos ampliados de OFFER_CHUNK y el recorte en
+  //                        memoria se aplica DESPUES de concatenar los bloques
+  //                        necesarios, de modo que cada pagina logica devuelva
+  //                        `limit` items validos sin duplicar ni omitir.
+  //  - solo limit       -> traer esa cantidad (con "en oferta" se amplía).
   //  - sin limit/offset -> catalogo completo paginado de 500 en 500 hasta
   //                        cubrir `count` (PostgREST truncaria a 1000 por peto).
   const PAGE_SIZE = 500;
+  const OFFER_CHUNK = 200; // tamano de bloque fisico al paginar con "solo ofertas"
   const pageLimit = filters.limit ?? 24;
+  const isPagedOffers = filters.offset != null && filters.enOferta;
+  // Paginas logicas (offset+limit) con orden por precio efectivo u ofertas:
+  // exigen cargar el resultado filtrado completo y cortar en memoria.
+  const needsFullLoad = filters.offset != null && (isPagedOffers || byEffectivePrice);
 
-  if (filters.offset != null) {
-    query = query.range(filters.offset, filters.offset + (pageLimit - 1));
+  let physRange = null;   // [from, to] o null
+  let physLimit = null;   // numero o null
+  if (needsFullLoad) {
+    physRange = [0, PAGE_SIZE - 1]; // primera ventana del recorrido completo
+  } else if (filters.offset != null) {
+    physRange = [filters.offset, filters.offset + (pageLimit - 1)];
   } else if (filters.limit === 0) {
-    // limit:0 -> solo se quiere el conteo exacto, sin traer filas
-    query = query.limit(0);
-    const { count: onlyCount, error: countError } = await query;
-    if (countError) throw countError;
-    return { data: [], count: onlyCount || 0 };
+    physLimit = 0; // solo se quiere el conteo exacto, sin traer filas
   } else if (filters.limit && filters.enOferta) {
-    query = query.limit(Math.max(pageLimit * 4, 100));
+    physLimit = Math.max(pageLimit * 4, 100);
   } else if (filters.limit) {
-    query = query.limit(filters.limit);
+    physLimit = filters.limit;
+  }
+
+  // Helper: construye una query con exactamente los mismos filtros/orden.
+  // Se usa para la peticion principal, para recorrer rangos adicionales
+  // (paginacion) y para reintentar sin la columna "codigo".
+  const buildFilteredQuery = (useCodigo = true) => {
+    const q = supabase
+      .from('productos')
+      .select(`
+        *,
+        categorias ( id, nombre, slug )
+      `, { count: 'exact' })
+      .eq('activo', true);
+    if (filters.categoriaId) q.eq('categoria_id', filters.categoriaId);
+    if (filters.destacados) q.eq('destacado', true);
+    // Filtro "en oferta": aqui solo pedimos ofertas > 0. Antes usabamos
+    // .lt('precio_oferta', 'precio'), pero PostgREST intenta parsear "precio"
+    // como numero y devuelve error 22P02; la comprobacion final
+    // (oferta < precio normal) se hace en memoria mas abajo.
+    if (filters.enOferta) q.gt('precio_oferta', 0);
+    const clause = useCodigo ? searchOrClause : searchOrClauseNameOnly;
+    if (clause) q.or(clause);
+    if (byEffectivePrice) {
+      q.order('precio', { ascending: orden === 'precio-asc' });
+    } else if (orden === 'nuevos') {
+      q.order('created_at', { ascending: false });
+    } else {
+      q.order('destacado', { ascending: false })
+       .order('created_at', { ascending: false });
+    }
+    return q;
+  };
+
+  // La peticion principal aplica los parametros fisicos resueltos arriba
+  let query = buildFilteredQuery();
+  if (physRange) {
+    query = query.range(physRange[0], physRange[1]);
+  } else if (physLimit != null) {
+    query = query.limit(physLimit);
   }
 
   try {
     let { data, error, count } = await query;
 
     // Compatibilidad: si la columna "codigo" aun no existe en la BD (no se ha
-    // ejecutado la migracion), PostgREST falla al filtrar/ordenar por ella.
-    // Reintentamos sin "codigo": busqueda solo por nombre y sin paginacion extra.
+    // ejecutado la migracion), PostgREST falla al filtrar por ella. Reintentamos
+    // la misma peticion buscando solo por nombre.
     if (error && /codigo/i.test(error.message || '')) {
       console.warn('La columna "codigo" no existe en productos todavia. Ejecuta la migracion SQL. Reintentando sin codigo...');
-      searchOrClause = null;
-      const clean = String(filters.busqueda || '')
-        .replace(/[(),"%\\]/g, ' ')
-        .replace(/[^\p{L}\p{N}\s._-]/gu, '')
-        .toLowerCase().trim();
-      const nameOnlyClause = clean
-        ? clean.split(/\s+/).filter(Boolean).map(term => `nombre.ilike."*${term}*"`).join(',')
-        : null;
-      const base = () => supabase
-        .from('productos')
-        .select(`\n          *,\n          categorias ( id, nombre, slug )\n        `, { count: 'exact' })
-        .eq('activo', true);
-      let q2 = base();
-      if (filters.categoriaId) q2 = q2.eq('categoria_id', filters.categoriaId);
-      if (filters.destacados) q2 = q2.eq('destacado', true);
-      if (filters.enOferta) q2 = q2.gt('precio_oferta', 0);
-      if (nameOnlyClause) q2 = q2.or(nameOnlyClause);
-      if (orden === 'precio-asc' || orden === 'precio-desc') {
-        q2 = q2.order('precio', { ascending: orden === 'precio-asc' });
-      } else if (orden === 'nuevos') {
-        q2 = q2.order('created_at', { ascending: false });
-      } else {
-        q2 = q2.order('destacado', { ascending: false }).order('created_at', { ascending: false });
-      }
-      if (filters.offset != null) {
-        q2 = q2.range(filters.offset, filters.offset + ((filters.limit ?? 24) - 1));
-      } else if (filters.limit) {
-        q2 = q2.limit(filters.limit);
-      }
+      let q2 = buildFilteredQuery(false);
+      if (physRange) q2 = q2.range(physRange[0], physRange[1]);
+      else if (physLimit != null) q2 = q2.limit(physLimit);
       const r = await q2;
       data = r.data; error = r.error; count = r.count;
-      // Evitar el recorrido de paginas extra (que volveria a usar el filtro roto)
-      filters = { ...filters, limit: filters.limit ?? 1000 };
     }
 
     if (error) throw error;
 
     let products = (data || []).map(normalizeProduct);
 
-    // Sin limit explicito: recorrer el resto de paginas hasta tener todo.
-    if (!filters.limit && filters.offset == null && count > products.length) {
+    // Recorrido completo del resultado filtrado (pagina logica con "en oferta"
+    // u orden por precio efectivo, o catalogo entero sin limit).
+    if ((needsFullLoad || (!filters.limit && filters.offset == null)) && count > products.length) {
       for (let from = products.length; from < count; from += PAGE_SIZE) {
         const to = Math.min(from + PAGE_SIZE, count) - 1;
-        const next = await supabase
-          .from('productos')
-          .select(`
-            *,
-            categorias ( id, nombre, slug )
-          `, { count: 'exact' })
-          .eq('activo', true);
-
-        // Replicar exactamente los mismos filtros/orden de la primera query
-        if (filters.categoriaId) next.eq('categoria_id', filters.categoriaId);
-        if (filters.destacados) next.eq('destacado', true);
-        if (filters.enOferta) next.gt('precio_oferta', 0);
-        if (filters.busqueda && searchOrClause) next.or(searchOrClause);
-        if (orden === 'precio-asc' || orden === 'precio-desc') {
-          next.order('precio', { ascending: orden === 'precio-asc' });
-        } else if (orden === 'nuevos') {
-          next.order('created_at', { ascending: false });
-        } else {
-          next.order('destacado', { ascending: false })
-              .order('created_at', { ascending: false });
-        }
-
-        const { data: moreData, error: moreError } = await next.range(from, to);
+        const { data: moreData, error: moreError } = await buildFilteredQuery().range(from, to);
         if (moreError) throw moreError;
         const extra = (moreData || []).map(normalizeProduct);
         if (!extra.length) break; // seguridad contra bucles infinitos
@@ -275,16 +238,20 @@ export async function getProducts(filtersParam = {}) {
     }
 
     // Reordenar en memoria por precio efectivo (oferta si existe, si no precio
-    // normal). Con "todos" se traen todas las paginas, asi que este orden es
-    // global y correcto; ademas cubre los casos en oferta + precio combinados.
-    if (orden === 'precio-asc' || orden === 'precio-desc') {
+    // normal). Al haber cargado el resultado filtrado completo cuando se pide
+    // una pagina, este orden es global y correcto entre paginas.
+    if (byEffectivePrice) {
       const dir = orden === 'precio-asc' ? 1 : -1;
       const effective = (p) => (p.precio_oferta && p.precio_oferta < p.precio ? p.precio_oferta : p.precio);
       products.sort((a, b) => (effective(a) - effective(b)) * dir);
     }
 
-    // Si el filtro "en oferta" trajó una pagina ampliada, recortar al limite real
-    if (filters.enOferta && filters.limit && products.length > filters.limit) {
+    // Pagina logica: cortamos exactamente el rango [offset, offset+limit)
+    // tras los filtros/orden aplicados en memoria.
+    if (needsFullLoad) {
+      products = products.slice(filters.offset, filters.offset + pageLimit);
+    } else if (filters.enOferta && filters.limit && products.length > filters.limit) {
+      // Si el filtro "en oferta" trajo una pagina ampliada, recortar al limite real
       products = products.slice(0, filters.limit);
     }
 

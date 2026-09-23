@@ -964,6 +964,73 @@
 }
 
 /* ============================================
+   PAGINACIÓN DE PRODUCTOS (Home: 20 por página)
+   ============================================ */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-6);
+}
+
+.pagination[hidden] {
+  display: none;
+}
+
+.pagination__btn {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-gray-700, #374151);
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-gray-300);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pagination__btn:hover:not(:disabled):not(.pagination__btn--current) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pagination__btn:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(107, 142, 35, 0.2);
+}
+
+.pagination__btn--current {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+  cursor: default;
+}
+
+.pagination__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagination__ellipsis {
+  padding: 0 4px;
+  color: var(--color-gray-500, #6B7280);
+  user-select: none;
+}
+
+@media (max-width: 599.98px) {
+  .pagination__btn {
+    min-width: 36px;
+    height: 36px;
+  }
+}
+
+/* ============================================
    BOTÓN MODO CLARO/OSCURO (js/theme.js)
    ============================================ */
 .theme-toggle {
