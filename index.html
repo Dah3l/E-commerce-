@@ -208,14 +208,18 @@
   <!-- Scripts -->
   <script type="module">
     import { initMobileMenu, showToast } from './js/ui.js';
-    import { getCategories, initCategoryFilters } from './js/categorias.js';
+    import { getCategories } from './js/categorias.js';
     import { getProducts, renderProductsGrid, showProductSkeletons } from './js/productos.js';
     import { getCartCount, addToCart } from './js/carrito.js';
-    import { formatPrice } from './js/utils.js';
+    import { getBizConfig, getCurrency } from './js/config-negocio.js';
 
     // Inicializar menú móvil
     initMobileMenu();
-    
+
+    // Cache de productos cargados (para añadir al carrito sin otro fetch)
+    let loadedProducts = [];
+    let currentCurrency = 'USD';
+
     // Inicializar contador del carrito
     function updateCartCounter() {
       const count = getCartCount();
@@ -227,24 +231,27 @@
     }
     updateCartCounter();
     window.addEventListener('cart-updated', updateCartCounter);
-    
-    // Función global para añadir al carrito y mostrar notificación
-    window.addToCartAndNotify = async (productId) => {
-      try {
-        const product = await fetch(`/api/producto/${productId}`).then(r => r.json());
-        if (addToCart(product)) {
-          showToast(`"${product.nombre}" añadido al carrito`, 'success');
-        }
-      } catch (error) {
-        showToast('Error al añadir producto', 'error');
+
+    // Delegación de eventos: botones "Añadir al carrito" de las cards
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-add-to-cart]');
+      if (!btn || btn.disabled) return;
+
+      const id = btn.dataset.addToCart;
+      const product = loadedProducts.find(p => String(p.id) === String(id));
+      if (!product) {
+        showToast('No se pudo encontrar el producto', 'error');
+        return;
       }
-    };
-    
-    // Cargar categorías
+      if (addToCart(product)) {
+        showToast(`"${product.nombre}" añadido al carrito`, 'success');
+      }
+    });
+
+    // Cargar categorías y montar filtros
     async function loadCategories() {
       const categories = await getCategories();
-      
-      // Renderizar filtros
+
       const filtersContainer = document.querySelector('.category-filters');
       if (filtersContainer) {
         let html = `<button class="category-btn category-btn--active" data-category-id="">Todos</button>`;
@@ -254,43 +261,94 @@
           </button>
         `).join('');
         filtersContainer.innerHTML = html;
-        
-        // Listeners para filtros
+
         filtersContainer.addEventListener('click', async (e) => {
           const btn = e.target.closest('.category-btn');
           if (!btn) return;
-          
-          // Actualizar activo
+
           filtersContainer.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
           btn.classList.add('category-btn--active');
-          
-          // Filtrar productos
+
           const categoryId = btn.dataset.categoryId;
           await loadAllProducts(categoryId || null);
         });
       }
+
+      // Grid de categorías (tarjetas) si la página tiene el contenedor
+      const cardsContainer = document.getElementById('categories-grid');
+      if (cardsContainer) {
+        cardsContainer.innerHTML = categories.map(cat => `
+          <div class="category-card" role="button" tabindex="0" data-category-id="${cat.id}">
+            <div class="category-card__info">
+              <h3 class="category-card__title">${cat.nombre}</h3>
+              ${cat.descripcion ? `<p class="category-card__description">${cat.descripcion}</p>` : ''}
+            </div>
+          </div>
+        `).join('') || '<p>No hay categorías disponibles.</p>';
+
+        cardsContainer.addEventListener('click', (e) => {
+          const card = e.target.closest('.category-card');
+          if (!card) return;
+          const filterBtn = document.querySelector(`.category-btn[data-category-id="${card.dataset.categoryId}"]`);
+          filterBtn?.click();
+          document.querySelector('#all-products')?.scrollIntoView({ behavior: 'smooth' });
+        });
+      }
     }
-    
-    // Cargar productos destacados
+
+    // Cargar productos destacados (carrusel horizontal, sin duplicar el grid)
     async function loadFeaturedProducts() {
       showProductSkeletons('#featured-products', 3);
       const { data: products } = await getProducts({ destacados: true, limit: 6 });
+      const featuredOnly = products.filter(p => !loadedProducts.some(x => x.id === p.id));
+      loadedProducts.push(...featuredOnly);
       renderProductsGrid(products, '#featured-products');
+      const grid = document.getElementById('featured-products');
+      grid.classList.add('products-grid--scroll');
     }
-    
-    // Cargar todos los productos
+
+    // Cargar todos los productos (con filtro opcional)
     async function loadAllProducts(categoriaId = null) {
       showProductSkeletons('#all-products', 6);
-      const { data: products } = await getProducts({ categoriaId, limit: 12 });
+      const { data: featured } = await getProducts({ destacados: true, limit: 6 });
+      const { data: products } = await getProducts({ categoriaId, limit: 24 });
+
+      // Combinar sin duplicados para que el botón de cualquier card funcione
+      const merged = [...featured];
+      for (const p of products) {
+        if (!merged.some(x => x.id === p.id)) merged.push(p);
+      }
+      loadedProducts = merged;
       renderProductsGrid(products, '#all-products');
+      if (products.length === 0) {
+        document.getElementById('all-products').innerHTML = '<p style="grid-column: 1 / -1; text-align:center; color:#6B7280; padding: 24px;">No hay productos en esta categoría.</p>';
+      }
     }
-    
+
+    // Aplica datos del negocio (nombre, moneda, contacto)
+    async function applyBizConfig() {
+      try {
+        const config = await getBizConfig();
+        currentCurrency = getCurrency(config);
+        if (config.nombre_negocio) {
+          document.title = `${config.nombre_negocio} - Inicio`;
+          document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${config.nombre_negocio}`; });
+        }
+      } catch (_) { /* usar valores por defecto */ }
+    }
+
     // Inicializar página
-    document.addEventListener('DOMContentLoaded', () => {
+    async function init() {
+      await applyBizConfig();
       loadCategories();
-      loadFeaturedProducts();
-      loadAllProducts();
-    });
+      await Promise.all([loadFeaturedProducts(), loadAllProducts()]);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>

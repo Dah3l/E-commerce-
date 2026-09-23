@@ -460,3 +460,20 @@
 .section--border {
   border-top: 1px solid var(--color-gray-200);
 }
+
+/* ============================================
+   DESTACADOS EN CARRUSEL HORIZONTAL
+   ============================================ */
+.products-grid--scroll {
+  display: flex;
+  grid-template-columns: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: var(--spacing-2, 8px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.products-grid--scroll > * {
+  flex: 0 0 240px;
+  scroll-snap-align: start;
+}

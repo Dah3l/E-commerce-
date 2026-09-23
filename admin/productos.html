@@ -28,18 +28,18 @@
 
     <main class="admin-main">
       <header class="admin-header">
-        <button class="admin-sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Abrir menú">☰</button>
         <h1 class="admin-header__title">Gestión de Productos</h1>
         <div class="admin-header__actions">
-          <button class="btn btn--primary" onclick="openProductoModal()">➕ Nuevo Producto</button>
-          <button class="btn btn--secondary logout-btn" onclick="logout()">🚪 Salir</button>
+          <button class="btn btn--primary" id="btnNuevoProducto">➕ Nuevo Producto</button>
+          <button class="btn btn--secondary logout-btn" id="btnLogout">🚪 Salir</button>
         </div>
       </header>
 
       <div class="container" style="padding: var(--spacing-6);">
         <div class="admin-filters">
-          <input type="text" class="form-input admin-search" placeholder="Buscar productos..." id="searchInput" onkeyup="searchProductos()">
-          <select class="form-select" id="filtroCategoria" onchange="loadProductos()" style="min-width: 200px;">
+          <input type="text" class="form-input admin-search" placeholder="Buscar productos..." id="searchInput">
+          <select class="form-select" id="filtroCategoria" style="min-width: 200px;">
             <option value="">Todas las categorías</option>
           </select>
         </div>
@@ -66,200 +66,204 @@
     </main>
   </div>
 
-  <!-- Modal Producto -->
-  <div id="productoModal" class="modal-overlay" style="display: none;">
-    <div class="modal" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-      <div class="modal__header">
-        <h2 class="modal__title" id="modalTitle">Nuevo Producto</h2>
-        <button class="modal__close" onclick="closeProductoModal()">&times;</button>
-      </div>
-      <div class="modal__body">
-        <form id="productoForm">
-          <input type="hidden" id="productoId">
-          <div class="form-group">
-            <label class="form-label form-label--required">Nombre</label>
-            <input type="text" class="form-input" id="nombre" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Descripción</label>
-            <textarea class="form-textarea" id="descripcion"></textarea>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-4);">
-            <div class="form-group">
-              <label class="form-label form-label--required">Precio</label>
-              <input type="number" class="form-input" id="precio" step="0.01" min="0" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Precio Oferta</label>
-              <input type="number" class="form-input" id="precioOferta" step="0.01" min="0">
-            </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-4);">
-            <div class="form-group">
-              <label class="form-label">Stock</label>
-              <input type="number" class="form-input" id="stock" min="0" value="0">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Categoría</label>
-              <select class="form-select" id="categoriaId"></select>
-            </div>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" class="form-check__input" id="destacado">
-            <label class="form-check__label" for="destacado">Marcar como destacado</label>
-          </div>
-          <div class="form-check">
-            <input type="checkbox" class="form-check__input" id="activo" checked>
-            <label class="form-check__label" for="activo">Activo</label>
-          </div>
-          <div class="form-group" style="margin-top: var(--spacing-4);">
-            <label class="form-label">Imagen</label>
-            <input type="file" class="form-input" id="imagenFile" accept="image/*">
-            <input type="hidden" id="imagenUrl">
-          </div>
-        </form>
-      </div>
-      <div class="modal__footer">
-        <button class="btn btn--secondary" onclick="closeProductoModal()">Cancelar</button>
-        <button class="btn btn--primary" onclick="saveProducto()">Guardar</button>
-      </div>
-    </div>
-  </div>
-
   <script type="module">
-    import { isAuthenticated } from '../js/auth.js';
-    import { supabase, uploadImage } from '../js/supabase-client.js';
-    import { showToast, showConfirmModal } from '../js/ui.js';
-    import { slugify } from '../js/utils.js';
+    import { isAuthenticated, logout } from '../js/auth.js';
+    import { supabase, uploadImage, getStorageUrl } from '../js/supabase-client.js';
+    import { showToast, showConfirmModal, showFormModal, escapeHtml } from '../js/ui.js';
+    import { normalizeProduct } from '../js/productos.js';
+    import { clearConfigCaches } from '../js/config-negocio.js';
 
     if (!isAuthenticated()) window.location.href = '/admin/login.html';
 
-    window.toggleSidebar = () => document.getElementById('adminSidebar').classList.toggle('admin-sidebar--open');
-    window.logout = () => { sessionStorage.removeItem('admin_session'); window.location.href = '/admin/login.html'; };
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      document.getElementById('adminSidebar').classList.toggle('admin-sidebar--open');
+    });
+    document.getElementById('btnLogout').addEventListener('click', logout);
 
     let categorias = [];
     let productos = [];
 
     async function loadCategorias() {
-      const { data } = await supabase.from('categorias').select('id, nombre').order('nombre');
+      const { data, error } = await supabase.from('categorias').select('id, nombre').order('nombre');
+      if (error) {
+        console.error('Error cargando categorías:', error);
+        showToast('No se pudieron cargar las categorías', 'error');
+        return;
+      }
       categorias = data || [];
-      const select = document.getElementById('filtroCategoria');
-      const categoriaSelect = document.getElementById('categoriaId');
-      select.innerHTML = '<option value="">Todas las categorías</option>' + categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-      categoriaSelect.innerHTML = categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+      document.getElementById('filtroCategoria').innerHTML =
+        '<option value="">Todas las categorías</option>' +
+        categorias.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
     }
 
     async function loadProductos() {
       const filtroCat = document.getElementById('filtroCategoria').value;
       let query = supabase.from('productos').select('*, categorias(nombre)').order('created_at', { ascending: false });
       if (filtroCat) query = query.eq('categoria_id', filtroCat);
-      const { data } = await query;
-      productos = data || [];
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error cargando productos:', error);
+        showToast('No se pudieron cargar los productos', 'error');
+        return;
+      }
+      productos = (data || []).map(normalizeProduct);
       renderProductos();
     }
 
+    function imageUrl(p) {
+      if (!p.imagen_url) return '/assets/icons/placeholder.svg';
+      return getStorageUrl(p.imagen_url) || '/assets/icons/placeholder.svg';
+    }
+
     function renderProductos() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = productos.filter(p => p.nombre.toLowerCase().includes(search));
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const filtered = search
+        ? productos.filter(p => (p.nombre || '').toLowerCase().includes(search))
+        : productos;
       const tbody = document.getElementById('productosTableBody');
+
       if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">No hay productos</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px;">${search ? 'Sin resultados para la búsqueda' : 'No hay productos. Crea el primero con "➕ Nuevo Producto".'}</td></tr>`;
         return;
       }
+
       tbody.innerHTML = filtered.map(p => `
         <tr>
-          <td><img src="${p.imagen_url || '/assets/icons/placeholder.svg'}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"></td>
-          <td>${p.nombre}</td>
-          <td>${p.categorias?.nombre || '-'}</td>
-          <td>$${p.precio.toFixed(2)}${p.precio_oferta ? ` <span style="color: var(--color-error); font-size: 12px;">($${p.precio_oferta.toFixed(2)})</span>` : ''}</td>
-          <td><span class="badge ${p.stock === 0 ? 'badge--danger' : p.stock < 10 ? 'badge--warning' : 'badge--success'}">${p.stock}</span></td>
+          <td><img src="${escapeHtml(imageUrl(p))}" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.src='/assets/icons/placeholder.svg'"></td>
+          <td>${escapeHtml(p.nombre)}</td>
+          <td>${escapeHtml(p.categorias?.nombre || '-')}</td>
+          <td>$${Number(p.precio).toFixed(2)}${p.precio_oferta ? ` <span style="color: var(--color-error); font-size: 12px;">($${Number(p.precio_oferta).toFixed(2)})</span>` : ''}</td>
+          <td><span class="badge ${p.stock === 0 ? 'badge--danger' : p.stock < 10 ? 'badge--warning' : 'badge--success'}">${p.stock ?? '-'}</span></td>
           <td><span class="badge ${p.activo ? 'badge--success' : 'badge--danger'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
           <td class="admin-table__actions">
-            <button class="admin-table__btn admin-table__btn--edit" onclick="editProducto('${p.id}')">✏️</button>
-            <button class="admin-table__btn admin-table__btn--delete" onclick="deleteProducto('${p.id}')">🗑️</button>
+            <button class="admin-table__btn admin-table__btn--edit" data-edit="${p.id}" title="Editar">✏️</button>
+            <button class="admin-table__btn admin-table__btn--delete" data-delete="${p.id}" title="Eliminar">🗑️</button>
           </td>
         </tr>
       `).join('');
     }
 
-    window.searchProductos = renderProductos;
+    // Delegación de eventos en la tabla (editar / eliminar)
+    document.getElementById('productosTableBody').addEventListener('click', async (e) => {
+      const editBtn = e.target.closest('[data-edit]');
+      const delBtn = e.target.closest('[data-delete]');
+      if (editBtn) openProductoModal(editBtn.dataset.edit);
+      if (delBtn) deleteProducto(delBtn.dataset.delete);
+    });
 
-    window.openProductoModal = () => {
-      document.getElementById('productoForm').reset();
-      document.getElementById('productoId').value = '';
-      document.getElementById('modalTitle').textContent = 'Nuevo Producto';
-      document.getElementById('productoModal').style.display = 'flex';
-    };
+    document.getElementById('searchInput').addEventListener('input', renderProductos);
+    document.getElementById('filtroCategoria').addEventListener('change', loadProductos);
+    document.getElementById('btnNuevoProducto').addEventListener('click', () => openProductoModal());
 
-    window.closeProductoModal = () => document.getElementById('productoModal').style.display = 'none';
+    function productoFields(p = {}) {
+      return [
+        { id: 'nombre', label: 'Nombre', type: 'text', required: true, value: p.nombre || '' },
+        { id: 'descripcion', label: 'Descripción', type: 'textarea', value: p.descripcion || '' },
+        { id: 'precio', label: 'Precio', type: 'number', required: true, step: '0.01', min: 0, value: p.precio ?? '' },
+        { id: 'precioOferta', label: 'Precio Oferta', type: 'number', step: '0.01', min: 0, value: p.precio_oferta ?? '' },
+        { id: 'stock', label: 'Stock', type: 'number', min: 0, value: p.stock ?? 0 },
+        {
+          id: 'categoriaId', label: 'Categoría', type: 'select',
+          options: [{ value: '', label: '— Sin categoría —' }, ...categorias.map(c => ({ value: c.id, label: c.nombre }))],
+          value: p.categoria_id || ''
+        },
+        { id: 'destacado', label: 'Marcar como destacado', type: 'checkbox', value: !!p.destacado },
+        { id: 'activo', label: 'Activo (visible en la tienda)', type: 'checkbox', value: p.activo !== false },
+        { id: 'imagenFile', label: 'Imagen', type: 'file', value: p.imagen_url || '' }
+      ];
+    }
 
-    window.editProducto = async (id) => {
-      const p = productos.find(x => x.id === id);
-      if (!p) return;
-      document.getElementById('productoId').value = p.id;
-      document.getElementById('nombre').value = p.nombre;
-      document.getElementById('descripcion').value = p.descripcion || '';
-      document.getElementById('precio').value = p.precio;
-      document.getElementById('precioOferta').value = p.precio_oferta || '';
-      document.getElementById('stock').value = p.stock;
-      document.getElementById('categoriaId').value = p.categoria_id || '';
-      document.getElementById('destacado').checked = p.destacado;
-      document.getElementById('activo').checked = p.activo;
-      document.getElementById('imagenUrl').value = p.imagen_url || '';
-      document.getElementById('modalTitle').textContent = 'Editar Producto';
-      document.getElementById('productoModal').style.display = 'flex';
-    };
-
-    window.saveProducto = async () => {
-      const id = document.getElementById('productoId').value;
-      const imagenFile = document.getElementById('imagenFile').files[0];
-      let imagenUrl = document.getElementById('imagenUrl').value;
-      
-      if (imagenFile) {
-        const fileName = `${Date.now()}-${imagenFile.name}`;
-        const result = await uploadImage(imagenFile, fileName);
-        if (result.url) imagenUrl = result.url;
+    async function guardarProducto(values, existing) {
+      let imagenUrl = existing?.imagen_url || '';
+      let imageWarning = null;
+      if (values.imagenFile) {
+        const fileName = `${Date.now()}-${values.imagenFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const result = await uploadImage(values.imagenFile, fileName);
+        if (result.error) {
+          imageWarning = 'La imagen no se pudo subir. Verifica que el bucket "productos" exista y sea público en Supabase Storage.';
+        } else {
+          imagenUrl = result.url;
+        }
       }
 
       const data = {
-        nombre: document.getElementById('nombre').value,
-        descripcion: document.getElementById('descripcion').value,
-        precio: parseFloat(document.getElementById('precio').value),
-        precio_oferta: parseFloat(document.getElementById('precioOferta').value) || null,
-        stock: parseInt(document.getElementById('stock').value),
-        categoria_id: document.getElementById('categoriaId').value || null,
-        destacado: document.getElementById('destacado').checked,
-        activo: document.getElementById('activo').checked,
-        imagen_url: imagenUrl
+        nombre: values.nombre.trim(),
+        descripcion: values.descripcion.trim() || null,
+        precio: parseFloat(values.precio),
+        precio_oferta: values.precioOferta !== '' && values.precioOferta !== null ? parseFloat(values.precioOferta) : null,
+        stock: values.stock !== '' ? parseInt(values.stock, 10) : 0,
+        categoria_id: values.categoriaId || null,
+        destacado: !!values.destacado,
+        activo: !!values.activo,
+        imagen_url: imagenUrl || null
       };
 
-      let error;
-      if (id) {
-        const res = await supabase.from('productos').update(data).eq('id', id);
-        error = res.error;
-      } else {
-        const res = await supabase.from('productos').insert([data]);
-        error = res.error;
-      }
+      if (isNaN(data.precio)) return { error: 'El precio debe ser un número válido' };
 
-      if (error) {
-        showToast('Error guardando producto', 'error');
+      if (existing) {
+        const { error } = await supabase.from('productos').update(data).eq('id', existing.id);
+        if (error) {
+          console.error(error);
+          return { error: 'Error guardando cambios: ' + error.message };
+        }
       } else {
-        showToast('Producto guardado exitosamente', 'success');
-        closeProductoModal();
+        const { error } = await supabase.from('productos').insert([data]);
+        if (error) {
+          console.error(error);
+          return { error: 'Error creando producto: ' + error.message };
+        }
+      }
+      clearConfigCaches();
+      if (imageWarning) showToast(imageWarning, 'warning', 6000);
+      return {};
+    }
+
+    function openProductoModal(id = null) {
+      const p = id ? productos.find(x => x.id === id) : null;
+      showFormModal({
+        title: p ? 'Editar Producto' : 'Nuevo Producto',
+        fields: productoFields(p || {}),
+        onSave: async (values) => {
+          const result = await guardarProducto(values, p);
+          if (!result.error) {
+            showToast(p ? 'Producto actualizado ✓' : 'Producto creado ✓', 'success');
+            loadProductos();
+          }
+          return result;
+        }
+      });
+    }
+
+    async function deleteProducto(id) {
+      const p = productos.find(x => x.id === id);
+      const ok = await showConfirmModal({
+        title: 'Eliminar Producto',
+        message: `¿Seguro que quieres eliminar "${p?.nombre || 'este producto'}"? Esta acción no se puede deshacer.`,
+        confirmText: 'Eliminar',
+        type: 'danger'
+      });
+      if (!ok) return;
+      const { error } = await supabase.from('productos').delete().eq('id', id);
+      if (error) {
+        console.error(error);
+        showToast('Error eliminando: ' + error.message, 'error');
+      } else {
+        showToast('Producto eliminado', 'success');
+        clearConfigCaches();
         loadProductos();
       }
-    };
+    }
 
-    window.deleteProducto = async (id) => {
-      if (await showConfirmModal({ title: 'Eliminar', message: '¿Está seguro?', confirmText: 'Eliminar', type: 'danger' })) {
-        const { error } = await supabase.from('productos').delete().eq('id', id);
-        if (error) showToast('Error eliminando', 'error');
-        else { showToast('Producto eliminado', 'success'); loadProductos(); }
-      }
-    };
+    async function init() {
+      await loadCategorias();
+      await loadProductos();
+    }
 
-    document.addEventListener('DOMContentLoaded', () => { loadCategorias(); loadProductos(); });
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>
