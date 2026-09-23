@@ -70,7 +70,7 @@
         <p class="hero__subtitle">Productos de comida y aseo personal directamente a tu puerta</p>
         
         <!-- Buscador -->
-        <form class="search-form hero__search" role="search" action="/busqueda.html">
+        <form class="search-form hero__search" role="search" id="searchForm">
           <input 
             type="search" 
             class="search-input" 
@@ -146,41 +146,6 @@
     </section>
   </main>
 
-  <!-- Footer -->
-  <footer class="site-footer" role="contentinfo">
-    <div class="container">
-      <div class="footer__content">
-        <div class="footer__section">
-          <h3>Mi Tienda Online</h3>
-          <p>Tu tienda de confianza para productos de comida y aseo personal.</p>
-          <div class="footer__social">
-            <a href="#" aria-label="Facebook">📘</a>
-            <a href="#" aria-label="Instagram">📷</a>
-            <a href="#" aria-label="WhatsApp">💬</a>
-          </div>
-        </div>
-        
-        <div class="footer__section">
-          <h3>Enlaces Rápidos</h3>
-          <a href="/">Inicio</a>
-          <a href="/#categorias">Categorías</a>
-          <a href="/contacto.html">Contacto</a>
-          <a href="/admin/login.html">Admin</a>
-        </div>
-        
-        <div class="footer__section">
-          <h3>Contacto</h3>
-          <p>📞 +123 456 7890</p>
-          <p>✉️ contacto@mitienda.com</p>
-          <p>📍 Calle Principal 123, Ciudad</p>
-        </div>
-      </div>
-      
-      <div class="footer__bottom">
-        <p>&copy; 2024 Mi Tienda Online. Todos los derechos reservados.</p>
-      </div>
-    </div>
-  </footer>
 
   <!-- Navegación Móvil Inferior -->
   <nav class="mobile-nav" id="mobile-nav" aria-label="Navegación móvil">
@@ -207,7 +172,7 @@
 
   <!-- Scripts -->
   <script type="module">
-    import { initMobileMenu, showToast } from './js/ui.js';
+    import { initMobileMenu, showToast, renderSiteFooter } from './js/ui.js';
     import { getCategories } from './js/categorias.js';
     import { getProducts, renderProductsGrid, showProductSkeletons } from './js/productos.js';
     import { getCartCount, addToCart } from './js/carrito.js';
@@ -232,10 +197,21 @@
     updateCartCounter();
     window.addEventListener('cart-updated', updateCartCounter);
 
-    // Delegación de eventos: botones "Añadir al carrito" de las cards
+    // Delegación de eventos: botones "Añadir al carrito" + navegación a detalle
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-add-to-cart]');
-      if (!btn || btn.disabled) return;
+      if (btn) {
+        if (btn.disabled) return;
+        e.preventDefault();
+      } else {
+        // Clic en la card (imagen/título) -> abrir página de producto
+        const card = e.target.closest('.product-card[data-product-id]');
+        if (card) {
+          window.location.href = `/producto.html?id=${card.dataset.productId}`;
+          return;
+        }
+        return;
+      }
 
       const id = btn.dataset.addToCart;
       const product = loadedProducts.find(p => String(p.id) === String(id));
@@ -307,11 +283,13 @@
       grid.classList.add('products-grid--scroll');
     }
 
-    // Cargar todos los productos (con filtro opcional)
+    let currentSearch = '';
+
+    // Cargar todos los productos (con filtro opcional de categoría y búsqueda)
     async function loadAllProducts(categoriaId = null) {
       showProductSkeletons('#all-products', 6);
       const { data: featured } = await getProducts({ destacados: true, limit: 6 });
-      const { data: products } = await getProducts({ categoriaId, limit: 24 });
+      const { data: products } = await getProducts({ categoriaId, busqueda: currentSearch || undefined, limit: 24 });
 
       // Combinar sin duplicados para que el botón de cualquier card funcione
       const merged = [...featured];
@@ -321,7 +299,7 @@
       loadedProducts = merged;
       renderProductsGrid(products, '#all-products');
       if (products.length === 0) {
-        document.getElementById('all-products').innerHTML = '<p style="grid-column: 1 / -1; text-align:center; color:#6B7280; padding: 24px;">No hay productos en esta categoría.</p>';
+        document.getElementById('all-products').innerHTML = `<p style="grid-column: 1 / -1; text-align:center; color:#6B7280; padding: 24px;">${currentSearch ? `No encontramos productos para "${currentSearch}".` : 'No hay productos en esta categoría.'}</p>`;
       }
     }
 
@@ -330,6 +308,7 @@
       try {
         const config = await getBizConfig();
         currentCurrency = getCurrency(config);
+        renderSiteFooter(config.nombre_negocio);
         if (config.nombre_negocio) {
           document.title = `${config.nombre_negocio} - Inicio`;
           document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${config.nombre_negocio}`; });
@@ -337,11 +316,46 @@
       } catch (_) { /* usar valores por defecto */ }
     }
 
+    // Buscador del hero: filtra el grid de productos en la misma página
+    function initSearch() {
+      const form = document.getElementById('searchForm');
+      if (!form) return;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = form.querySelector('input[type="search"]');
+        currentSearch = (input?.value || '').trim();
+        // desactivar filtro de categoría visualmente
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
+        document.querySelector('.category-btn[data-category-id=""]')?.classList.add('category-btn--active');
+        await loadAllProducts(null);
+        document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
+
     // Inicializar página
     async function init() {
       await applyBizConfig();
-      loadCategories();
-      await Promise.all([loadFeaturedProducts(), loadAllProducts()]);
+      initSearch();
+      await loadCategories();
+
+      // Soporte para /?categoria=slug (enlaces desde breadcrumb del detalle de producto)
+      const params = new URLSearchParams(window.location.search);
+      const catSlug = params.get('categoria');
+      let initialCategory = null;
+      if (catSlug) {
+        const btn = document.querySelector(`.category-btn[data-category-slug="${catSlug}"]`);
+        if (btn) {
+          document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
+          btn.classList.add('category-btn--active');
+          initialCategory = btn.dataset.categoryId || null;
+        }
+      }
+
+      await Promise.all([loadFeaturedProducts(), loadAllProducts(initialCategory)]);
+
+      if (catSlug) {
+        document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
 
     if (document.readyState === 'loading') {

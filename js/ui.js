@@ -570,3 +570,63 @@ export function scrollToElement(selector) {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
+
+/**
+ * Header estandar para todas las paginas publicas (inyectado por JS)
+ */
+export function renderSiteHeader(active = '') {
+  let mount = document.getElementById('site-header-mount');
+  if (!mount) {
+    mount = document.createElement('div');
+    mount.id = 'site-header-mount';
+    document.body.insertBefore(mount, document.body.firstChild);
+  }
+  if (mount.dataset.rendered) return;
+  mount.dataset.rendered = '1';
+  const link = (href, label, key) =>
+    `<li><a href="${href}" class="desktop-nav__link${key === active ? ' active' : ''}">${label}</a></li>`;
+  mount.innerHTML = `
+    <header class="site-header" role="banner">
+      <div class="container">
+        <div class="header-main">
+          <a href="/" class="header__logo">🛒 Mi Tienda</a>
+          <button class="hamburger-btn" aria-label="Menú" aria-expanded="false" aria-controls="mobile-nav">
+            <span></span><span></span><span></span>
+          </button>
+          <nav class="desktop-nav" aria-label="Navegación principal">
+            <ul class="desktop-nav__list">
+              ${link('/', 'Inicio', 'inicio')}
+              ${link('/#categorias', 'Categorías', 'categorias')}
+              ${link('/contacto.html', 'Contacto', 'contacto')}
+            </ul>
+          </nav>
+          <a href="/carrito.html" class="header__cart" aria-label="Ver carrito">
+            <span class="cart-icon">🛒</span>
+            <span class="cart-count" style="display: none;">0</span>
+          </a>
+        </div>
+      </div>
+    </header>`;
+}
+
+/**
+ * Footer estandar para todas las paginas publicas (inyectado por JS)
+ */
+export function renderSiteFooter(bizName) {
+  let mount = document.getElementById('site-footer-mount');
+  if (!mount) {
+    mount = document.createElement('div');
+    mount.id = 'site-footer-mount';
+    document.body.appendChild(mount);
+  }
+  if (mount.dataset.rendered) return;
+  mount.dataset.rendered = '1';
+  const year = new Date().getFullYear();
+  const name = bizName || 'Mi Tienda Online';
+  mount.innerHTML = `
+    <footer class="site-footer" role="contentinfo">
+      <div class="container">
+        <div class="footer__bottom"><p>&copy; ${year} ${name}</p></div>
+      </div>
+    </footer>`;
+}

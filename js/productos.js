@@ -6,6 +6,12 @@
 import { supabase, getStorageUrl } from './supabase-client.js';
 import { formatPrice, slugify } from './utils.js';
 
+// Moneda actual (se puede cambiar con setCurrency, p.ej. desde config_negocio)
+let currentCurrency = null;
+export function setCurrency(currency) {
+  if (currency) currentCurrency = currency;
+}
+
 // Cache de categorías en sessionStorage
 const CATEGORIES_CACHE_KEY = 'categories_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
@@ -76,6 +82,42 @@ export async function getProductById(id) {
     return normalizeProduct(data);
   } catch (error) {
     console.error('Error obteniendo producto:', error);
+    return null;
+  }
+}
+
+/**
+ * Busca un producto por el slug de su categoría + slug del nombre
+ * (el slug del producto se genera con slugify(nombre) al crearlo en el admin)
+ * @param {string} categoriaSlug - Slug de la categoría
+ * @param {string} productoSlug - Slug del nombre del producto
+ * @returns {Promise<Object|null>} Producto normalizado o null
+ */
+export async function getProductBySlug(categoriaSlug, productoSlug) {
+  try {
+    let query = supabase
+      .from('productos')
+      .select(`
+        *,
+        categorias (
+          id,
+          nombre,
+          slug
+        )
+      `)
+      .eq('activo', true);
+
+    if (categoriaSlug) {
+      query = query.eq('categorias.slug', categoriaSlug);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const found = (data || []).find(p => slugify(p.nombre) === productoSlug);
+    return found ? normalizeProduct(found) : null;
+  } catch (error) {
+    console.error('Error obteniendo producto por slug:', error);
     return null;
   }
 }
@@ -188,12 +230,17 @@ export async function getRelatedProducts(productId, categoriaId, limit = 4) {
 export function normalizeProduct(product) {
   if (!product) return product;
   const parsedStock = parseInt(product.stock, 10);
+  // Evitar doble conversión: si ya es URL http(s), dejarla tal cual
+  let imagen = product.imagen_url || null;
+  if (imagen && !/^https?:\/\//i.test(imagen)) {
+    imagen = getStorageUrl(imagen) || imagen;
+  }
   return {
     ...product,
     precio: Number(product.precio) || 0,
     precio_oferta: product.precio_oferta ? Number(product.precio_oferta) : null,
     stock: Number.isFinite(parsedStock) ? parsedStock : null,
-    imagen_url: product.imagen_url ? (getStorageUrl(product.imagen_url) || product.imagen_url) : null
+    imagen_url: imagen
   };
 }
 
@@ -238,9 +285,9 @@ export function renderProductCard(product) {
         
         <div class="product-card__price">
           ${tieneOferta ? `
-            <span class="product-card__price--old">${formatPrice(product.precio)}</span>
+            <span class="product-card__price--old">${formatPrice(product.precio, currentCurrency || undefined)}</span>
           ` : ''}
-          <span class="product-card__price--current">${formatPrice(precioFinal)}</span>
+          <span class="product-card__price--current">${formatPrice(precioFinal, currentCurrency || undefined)}</span>
         </div>
         
         <button 

@@ -10,12 +10,6 @@
   <link rel="stylesheet" href="/css/pages.css">
 </head>
 <body>
-  <header class="site-header"><div class="container"><div class="header-main">
-    <a href="/" class="header__logo">🛒 Mi Tienda</a>
-    <button class="hamburger-btn" aria-label="Menú"><span></span><span></span><span></span></button>
-    <a href="/carrito.html" class="header__cart"><span class="cart-icon">🛒</span><span class="cart-count" style="display:none;">0</span></a>
-  </div></div></header>
-
   <main id="main-content" class="contact-page" role="main">
     <div class="container">
       <h1 class="section__title">Contacto</h1>
@@ -25,18 +19,20 @@
         </div>
         <div class="contact-form-container">
           <h3>Envíanos un mensaje</h3>
-          <form onsubmit="event.preventDefault(); alert('Mensaje enviado (demo)');">
-            <div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" required></div>
-            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" required></div>
-            <div class="form-group"><label class="form-label">Mensaje</label><textarea class="form-textarea" required></textarea></div>
-            <button type="submit" class="btn btn--primary btn--block">Enviar Mensaje</button>
+          <p id="formHint" style="color:#6B7280; font-size:14px; margin-bottom:12px;">
+            Tu mensaje se enviará por WhatsApp.
+          </p>
+          <form id="contactForm">
+            <div class="form-group"><label class="form-label" for="cfNombre">Nombre</label><input type="text" id="cfNombre" class="form-input" required></div>
+            <div class="form-group"><label class="form-label" for="cfEmail">Email</label><input type="email" id="cfEmail" class="form-input"></div>
+            <div class="form-group"><label class="form-label" for="cfMensaje">Mensaje</label><textarea id="cfMensaje" class="form-textarea" required></textarea></div>
+            <button type="submit" class="btn btn--primary btn--block" id="cfSubmit">Enviar Mensaje</button>
           </form>
         </div>
       </div>
     </div>
   </main>
 
-  <footer class="site-footer"><div class="container"><div class="footer__bottom"><p>&copy; 2024 Mi Tienda Online</p></div></div></footer>
   <nav class="mobile-nav">
     <a href="/" class="mobile-nav__item"><span class="mobile-nav__icon">🏠</span><span>Inicio</span></a>
     <a href="/#categorias" class="mobile-nav__item"><span class="mobile-nav__icon">📂</span><span>Categorías</span></a>
@@ -45,28 +41,97 @@
   </nav>
 
   <script type="module">
-    import { supabase } from './js/supabase-client.js';
-    import { initMobileMenu } from './js/ui.js';
-    
-    initMobileMenu();
-    
+    import { initMobileMenu, showToast, escapeHtml, renderSiteHeader, renderSiteFooter } from './js/ui.js';
+    import { getBizConfig, getWhatsAppNumber } from './js/config-negocio.js';
+
+    let bizConfig = {};
+
     async function loadContactInfo() {
-      const { data } = await supabase.from('config_negocio').select('*').eq('id', 1).single();
       const container = document.getElementById('contactInfo');
-      if (data) {
-        container.innerHTML = `
-          <div class="contact-card"><div class="contact-card__icon">📞</div><div class="contact-card__content"><h3>Teléfono</h3><p>${data.telefono || 'No disponible'}</p></div></div>
-          <div class="contact-card"><div class="contact-card__icon">💬</div><div class="contact-card__content"><h3>WhatsApp</h3><p>${data.whatsapp || 'No disponible'}</p></div></div>
-          <div class="contact-card"><div class="contact-card__icon">✉️</div><div class="contact-card__content"><h3>Email</h3><p>${data.email || 'No disponible'}</p></div></div>
-          <div class="contact-card"><div class="contact-card__icon">📍</div><div class="contact-card__content"><h3>Dirección</h3><p>${data.direccion || 'No disponible'}</p></div></div>
-          <div class="contact-card"><div class="contact-card__icon">🕐</div><div class="contact-card__content"><h3>Horario</h3><p>${data.horario || 'No disponible'}</p></div></div>
-        `;
+      try {
+        bizConfig = await getBizConfig();
+      } catch (_) { bizConfig = {}; }
+
+      const c = bizConfig || {};
+      const phone = getWhatsAppNumber(c);
+      const rows = [
+        ['📞', 'Teléfono', c.telefono],
+        ['💬', 'WhatsApp', c.whatsapp ? (phone ? `<a href="https://wa.me/${phone}" target="_blank" rel="noopener">${escapeHtml(c.whatsapp)}</a>` : escapeHtml(c.whatsapp)) : null],
+        ['✉️', 'Email', c.email ? `<a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email)}</a>` : null],
+        ['📍', 'Dirección', c.direccion],
+        ['🕐', 'Horario', c.horario]
+      ];
+
+      container.innerHTML = rows.map(([icon, title, value]) => `
+        <div class="contact-card">
+          <div class="contact-card__icon">${icon}</div>
+          <div class="contact-card__content">
+            <h3>${title}</h3>
+            <p>${value || 'No disponible'}</p>
+          </div>
+        </div>
+      `).join('');
+
+      // Actualizar hint del formulario según lo configurado
+      const hint = document.getElementById('formHint');
+      const btn = document.getElementById('cfSubmit');
+      if (phone) {
+        hint.textContent = 'Tu mensaje se abrirá en WhatsApp listo para enviar.';
+        btn.textContent = 'Enviar por WhatsApp';
+      } else if (c.email) {
+        hint.textContent = 'Tu mensaje se abrirá en tu aplicación de correo.';
+        btn.textContent = 'Enviar Email';
       } else {
-        container.innerHTML = '<p>Información de contacto no disponible</p>';
+        hint.textContent = 'Aún no hay WhatsApp ni email configurados en la tienda.';
+        btn.disabled = true;
       }
     }
-    
-    document.addEventListener('DOMContentLoaded', loadContactInfo);
+
+    // Envío real: WhatsApp si hay número; si no, mailto; si no, aviso claro
+    document.getElementById('contactForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('cfNombre').value.trim();
+      const email = document.getElementById('cfEmail').value.trim();
+      const mensaje = document.getElementById('cfMensaje').value.trim();
+      if (!nombre || !mensaje) return;
+
+      const c = bizConfig || {};
+      const phone = getWhatsAppNumber(c);
+      const body = [
+        `¡Hola${c.nombre_negocio ? ' ' + c.nombre_negocio : ''}! 👋`,
+        `Me llamo ${nombre}.`,
+        '',
+        mensaje,
+        email ? `\n(Email de contacto: ${email})` : ''
+      ].join('\n');
+
+      if (phone) {
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(body)}`, '_blank');
+        showToast('Se abrió WhatsApp con tu mensaje listo para enviar', 'success');
+      } else if (c.email) {
+        window.location.href = `mailto:${c.email}?subject=${encodeURIComponent('Contacto web: ' + nombre)}&body=${encodeURIComponent(body)}`;
+      } else {
+        showToast('La tienda no tiene WhatsApp ni email configurados', 'error');
+        return;
+      }
+      e.target.reset();
+    });
+
+    async function init() {
+      renderSiteHeader('contacto');
+      initMobileMenu();
+      await loadContactInfo();
+      renderSiteFooter(bizConfig.nombre_negocio);
+      if (bizConfig.nombre_negocio) {
+        document.querySelectorAll('.header__logo').forEach(el => { el.textContent = `🛒 ${bizConfig.nombre_negocio}`; });
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   </script>
 </body>
 </html>
