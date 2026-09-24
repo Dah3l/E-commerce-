@@ -69,6 +69,10 @@ showToast(`"${product.nombre}" está agotado`, 'error');
 // listener anterior que llama a stopPropagation(), nunca llegan a correr. Por
 // eso el verde "aparecia tarde" (recien al volver de otra pagina, cuando el
 // render inicial ya ponia la clase --active).
+// IMPORTANTE: limpia el estado en TODOS los contenedores de chips de la pagina
+// (.category-filters y cualquier otro) para que NUNCA quede mas de una chip
+// marcada; antes, al pulsar varias categorias seguidas, algunas se quedaban
+// "pegadas" en verde.
 function paintChip(btn, cls) {
 if (!btn || btn.nodeType !== 1) return;
 document.querySelectorAll('.category-btn').forEach(b => {
@@ -113,6 +117,11 @@ const categories = await getCategories();
 
 const filtersContainer = document.querySelector('.category-filters');
 if (filtersContainer) {
+// Chips de categoria: se renderizan como <button> y el estado verde lo gestiona
+// SOLO JS (clase --active/--pressed via paintChip), que limpia las demas antes
+// de marcar una. Por eso en el CSS ya no existe ".category-btn:active": si el
+// navegador deja el toque nativo "pegado" al pulsar varias categorias seguidas,
+// ningun chip ajeno a la seleccion puede acabar en verde.
 let html = `<button class="category-btn category-btn--active" data-category-id="" aria-pressed="true">Todos</button>`;
 html += categories.map(cat => `
 <button class="category-btn" data-category-id="${cat.id}" data-category-slug="${cat.slug}">
