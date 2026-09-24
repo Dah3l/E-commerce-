@@ -427,45 +427,35 @@
   white-space: nowrap;
 }
 
+/* En tactil muchos navegadores dejan aplicado :hover despues del tap, por lo
+   que el hover NO debe poder "ganarle" al estado activo/pressed (verde):
+   se escriben primero y con menor especificidad. */
 .category-btn:hover {
   background-color: var(--color-gray-200);
 }
 
 /* Feedback inmediato al pulsar (tactil): el navegador no siempre aplica
-   :hover/:active al hacer tap, asi que JS añade esta clase al instante. */
-.category-btn--pressed {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-
+   :hover/:active al hacer tap, asi que JS añade esta clase al instante.
+   IMPORTANTE: --pressed y --active son VERDE desde el mismo toque; antes
+   existia un estado intermedio gris (--pending) que hacia que el chip se
+   viera gris hasta pulsar otra cosa en la pagina. */
+.category-btn:active,
 .category-btn--active,
 .category-btn--pressed {
   background-color: var(--color-primary);
   color: var(--color-white);
 }
 
-/* Estado activo SIN verde: se usa mientras la pagina anterior sigue visible
-   durante la carga de productos (asi el usuario ve que algo cambio, sin el
-   "lag" del color hasta terminar el fetch). */
-.category-btn--pending {
-  background-color: var(--color-gray-300);
-  color: var(--color-gray-900);
-}
-
-/* Modo oscuro: los chips neutros (--active/--pressed ya usan el verde de la
-   marca, que funciona en ambos temas; solo hay que invertir los grises). */
-:root[data-theme="dark"] .category-btn {
+/* Modo oscuro: solo hay que invertir los grises del chip normal; el estado
+   activo/pressed ya usa --color-primary (que en oscuro es un verde mas vivo,
+   #8FBC5A) y hereda el verde de las reglas de arriba. */
+:root[data-theme="dark"] .category-btn:not(.category-btn--active):not(.category-btn--pressed):not(:active) {
   background-color: var(--color-gray-800);
   color: var(--color-gray-200);
 }
 
-:root[data-theme="dark"] .category-btn:hover {
+:root[data-theme="dark"] .category-btn:not(.category-btn--active):not(.category-btn--pressed):not(:active):hover {
   background-color: var(--color-gray-700);
-}
-
-:root[data-theme="dark"] .category-btn--pending {
-  background-color: var(--color-gray-600);
-  color: var(--color-white);
 }
 
 /* ============================================
