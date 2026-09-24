@@ -65,17 +65,47 @@ showToast(`"${product.nombre}" está agotado`, 'error');
 
 // Marca un chip de categoria como activo (verde) de forma inmediata e
 // identica desde cualquier disparador (clic, tarjetas, busqueda, ?categoria=).
-// Antes cada sitio tocaba clases por su cuenta y el color "se veia tarde" en
-// tactil; ahora la marca ocurre sincronamente en el mismo toque.
+// No hay estado intermedio gris: el verde se aplica sincronamente en el mismo
+// toque, tanto en modo claro como en oscuro.
 function setCategoryActive(btn) {
 document.querySelectorAll('.category-btn').forEach(b => {
-b.classList.remove('category-btn--active', 'category-btn--pending');
+b.classList.remove('category-btn--active', 'category-btn--pressed', 'category-btn--pending');
 b.removeAttribute('aria-pressed');
 });
 if (btn) {
 btn.classList.add('category-btn--active');
 btn.setAttribute('aria-pressed', 'true');
 }
+}
+
+// Feedback verdoso instantaneo ANTES incluso del evento click: en tactil el
+// navegador puede demorar (o no aplicar) :active/:hover, asi que al bajar el
+// dedo/puntero pintamos el chip con la misma clase verde que usa --active.
+// Se enlaza una sola vez por delegacion sobre el contenedor de filtros.
+function bindCategoryPressFeedback() {
+const container = document.querySelector('.category-filters');
+if (!container || container.dataset.pressBound) return;
+container.dataset.pressBound = '1';
+
+const markPressed = (target) => {
+const btn = target.closest?.('.category-btn');
+if (!btn || btn.classList.contains('category-btn--active')) return;
+btn.classList.add('category-btn--pressed');
+};
+const clearPressed = () => {
+container.querySelectorAll('.category-btn--pressed').forEach(b => b.classList.remove('category-btn--pressed'));
+};
+
+// pointerdown cubre raton, tactil y lapiz; pointercancel/leave limpian si el
+// gesto no llega a convertirse en clic.
+container.addEventListener('pointerdown', (e) => markPressed(e.target));
+container.addEventListener('pointerup', () => {
+// El click (que llama a setCategoryActive) todavia no se disparo: quitamos la
+// clase temporal en el siguiente tick para evitar parpadeos/doble pintado.
+setTimeout(clearPressed, 0);
+});
+container.addEventListener('pointercancel', clearPressed);
+container.addEventListener('pointerleave', clearPressed);
 }
 
 // Cargar categorías y montar filtros
@@ -91,6 +121,9 @@ ${cat.nombre}
 </button>
 `).join('');
 filtersContainer.innerHTML = html;
+
+// Verde en el mismo instante del toque (pointerdown), no solo al soltar/click.
+bindCategoryPressFeedback();
 
 filtersContainer.addEventListener('click', async (e) => {
 const btn = e.target.closest('.category-btn');
