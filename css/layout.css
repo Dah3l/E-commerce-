@@ -566,7 +566,7 @@ body {
   --chip-gutter: 10px;
   display: flex;
   grid-template-columns: none;
-  align-items: stretch;
+  align-items: flex-start;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -581,15 +581,6 @@ body {
   flex: 0 0 240px;
   scroll-snap-align: start;
   margin-bottom: var(--chip-gutter);
-}
-
-/* Cards de destacados SIEMPRE del mismo tamano: con "align-items: stretch"
-   (arriba) + height:100%, la card mas alta define el alto del carrusel y las
-   demas se estiran igual; como el boton lleva "margin-top:auto", los titulos
-   cortos (o sin codigo / sin precio de oferta) ya no dejan tarjetas mas bajas,
-   sino que rellenan el espacio libre. */
-.products-grid--scroll .product-card {
-  height: 100%;
 }
 
 .products-grid--scroll::-webkit-scrollbar {
