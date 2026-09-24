@@ -63,13 +63,28 @@ showToast(`"${product.nombre}" está agotado`, 'error');
 }
 });
 
+// Marca un chip de categoria como activo (verde) de forma inmediata e
+// identica desde cualquier disparador (clic, tarjetas, busqueda, ?categoria=).
+// Antes cada sitio tocaba clases por su cuenta y el color "se veia tarde" en
+// tactil; ahora la marca ocurre sincronamente en el mismo toque.
+function setCategoryActive(btn) {
+document.querySelectorAll('.category-btn').forEach(b => {
+b.classList.remove('category-btn--active', 'category-btn--pending');
+b.removeAttribute('aria-pressed');
+});
+if (btn) {
+btn.classList.add('category-btn--active');
+btn.setAttribute('aria-pressed', 'true');
+}
+}
+
 // Cargar categorías y montar filtros
 async function loadCategories() {
 const categories = await getCategories();
 
 const filtersContainer = document.querySelector('.category-filters');
 if (filtersContainer) {
-let html = `<button class="category-btn category-btn--active" data-category-id="">Todos</button>`;
+let html = `<button class="category-btn category-btn--active" data-category-id="" aria-pressed="true">Todos</button>`;
 html += categories.map(cat => `
 <button class="category-btn" data-category-id="${cat.id}" data-category-slug="${cat.slug}">
 ${cat.nombre}
@@ -81,8 +96,9 @@ filtersContainer.addEventListener('click', async (e) => {
 const btn = e.target.closest('.category-btn');
 if (!btn) return;
 
-filtersContainer.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
-btn.classList.add('category-btn--active');
+// Marcar SIEMPRE al instante: el toque se registra visualmente en el momento
+// (antes de esperar los datos), no cuando se entra o sale de otra pagina.
+setCategoryActive(btn);
 
 const categoryId = btn.dataset.categoryId;
 activeFilters.categoriaId = categoryId || null;
@@ -357,15 +373,15 @@ if (!currentSearch) {
 // Busqueda vacia: restaurar vista normal con destacados visibles
 setFeaturedVisible(true);
 activeFilters.categoriaId = null;
+setCategoryActive(document.querySelector('.category-btn[data-category-id=""]'));
 await loadAllProducts();
 return;
 }
 showToast(`Resultados para "${currentSearch}"`, 'info');
 // Ocultar destacados durante la busqueda
 setFeaturedVisible(false);
-// desactivar filtro de categoria visualmente
-document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
-document.querySelector('.category-btn[data-category-id=""]')?.classList.add('category-btn--active');
+// desactivar filtro de categoria visualmente (mismo helper: verde inmediato en "Todos")
+setCategoryActive(document.querySelector('.category-btn[data-category-id=""]'));
 activeFilters.categoriaId = null;
 await loadAllProducts();
 // Ir directamente a los productos (sin pasar por destacados)
@@ -485,8 +501,7 @@ let initialCategory = null;
 if (catSlug) {
 const btn = document.querySelector(`.category-btn[data-category-slug="${catSlug}"]`);
 if (btn) {
-document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('category-btn--active'));
-btn.classList.add('category-btn--active');
+setCategoryActive(btn);
 initialCategory = btn.dataset.categoryId || null;
 }
 }

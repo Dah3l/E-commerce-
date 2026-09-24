@@ -414,7 +414,7 @@
    ============================================ */
 .category-btn {
   flex-shrink: 0;
-  padding: var(--spacing-2) var(--spacing-4);
+  padding: var(--spacing-1) var(--spacing-4);
   font-family: inherit;
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -431,8 +431,40 @@
   background-color: var(--color-gray-200);
 }
 
-.category-btn--active {
+/* Feedback inmediato al pulsar (tactil): el navegador no siempre aplica
+   :hover/:active al hacer tap, asi que JS añade esta clase al instante. */
+.category-btn--pressed {
   background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.category-btn--active,
+.category-btn--pressed {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+/* Estado activo SIN verde: se usa mientras la pagina anterior sigue visible
+   durante la carga de productos (asi el usuario ve que algo cambio, sin el
+   "lag" del color hasta terminar el fetch). */
+.category-btn--pending {
+  background-color: var(--color-gray-300);
+  color: var(--color-gray-900);
+}
+
+/* Modo oscuro: los chips neutros (--active/--pressed ya usan el verde de la
+   marca, que funciona en ambos temas; solo hay que invertir los grises). */
+:root[data-theme="dark"] .category-btn {
+  background-color: var(--color-gray-800);
+  color: var(--color-gray-200);
+}
+
+:root[data-theme="dark"] .category-btn:hover {
+  background-color: var(--color-gray-700);
+}
+
+:root[data-theme="dark"] .category-btn--pending {
+  background-color: var(--color-gray-600);
   color: var(--color-white);
 }
 
