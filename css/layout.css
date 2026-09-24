@@ -408,20 +408,36 @@ body {
 /* ============================================
    FILTROS DE CATEGORÍA
    ============================================ */
+/* El contenedor es una linea UNA SOLA de chips con scroll horizontal. La
+   barra de scroll va POR DEBAJO de las pastillas (no encima): para eso el
+   alto del contenedor = alto del chip + espacio reservado abajo (gutter) y
+   los chips llevan un margen inferior igual a ese gutter, de modo que la
+   barra rueda por la franja vacía y nunca tapa un chip. */
+:root {
+  --chip-gutter: 10px; /* espacio reservado para la barra de scroll */
+}
+
 .category-filters {
   display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
   gap: var(--spacing-2);
   overflow-x: auto;
-  /* Altura compacta: los chips miden su propio alto (linea + padding), sin
-     rellenos verticales extra del contenedor. */
-  padding: 0;
+  overflow-y: hidden;
+  /* Sin padding vertical: solo el gutter inferior para la barra. */
+  padding: 0 0 var(--chip-gutter);
   margin-bottom: var(--spacing-4);
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-300) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.category-filters > * {
+  margin-bottom: var(--chip-gutter);
 }
 
 .category-filters::-webkit-scrollbar {
-  height: 6px;
+  height: var(--chip-gutter);
 }
 
 .category-filters::-webkit-scrollbar-track {
@@ -433,10 +449,25 @@ body {
   border-radius: var(--radius-full);
 }
 
+:root[data-theme="dark"] .category-filters {
+  scrollbar-color: var(--color-gray-600) transparent;
+}
+
+:root[data-theme="dark"] .category-filters::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-600);
+}
+
+/* En escritorio caben todas las categorias en lineas: se permite envolver y
+   desaparece el scroll (y con el la barra). */
 @media (min-width: 768px) {
   .category-filters {
     flex-wrap: wrap;
     overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .category-filters > * {
+    margin-bottom: 0;
   }
 }
 
@@ -529,18 +560,48 @@ body {
 /* ============================================
    DESTACADOS EN CARRUSEL HORIZONTAL
    ============================================ */
+/* Mismo criterio que .category-filters: la barra de scroll rueda por una
+   franja propia DEBAJO de las cards (padding + margen del hijo), nunca encima. */
 .products-grid--scroll {
+  --chip-gutter: 10px;
   display: flex;
   grid-template-columns: none;
+  align-items: flex-start;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  padding-bottom: var(--spacing-2, 8px);
+  padding: 0 0 var(--chip-gutter);
+  margin-bottom: var(--spacing-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
   -webkit-overflow-scrolling: touch;
 }
 
 .products-grid--scroll > * {
   flex: 0 0 240px;
   scroll-snap-align: start;
+  margin-bottom: var(--chip-gutter);
+}
+
+.products-grid--scroll::-webkit-scrollbar {
+  height: var(--chip-gutter);
+}
+
+.products-grid--scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.products-grid--scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-300);
+  border-radius: var(--radius-full);
+}
+
+:root[data-theme="dark"] .products-grid--scroll {
+  scrollbar-color: var(--color-gray-600) transparent;
+}
+
+:root[data-theme="dark"] .products-grid--scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-600);
 }
 
 /* ============================================

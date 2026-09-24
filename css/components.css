@@ -413,6 +413,13 @@
    CATEGORY BUTTON (FILTRO)
    ============================================ */
 .category-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent; /* quita el flash gris de Chrome/Safari en tactil */
+  tap-highlight-color: transparent;
+  touch-action: manipulation;               /* elimina el retardo de ~300ms del tap */
+  user-select: none;
+  -webkit-user-select: none;
   flex-shrink: 0;
   padding: var(--spacing-1) var(--spacing-4);
   font-family: inherit;
@@ -423,25 +430,33 @@
   border: 2px solid transparent;
   border-radius: var(--radius-full);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast),
+              box-shadow var(--transition-fast);
   white-space: nowrap;
 }
 
-.category-btn:hover {
-  background-color: var(--color-gray-200);
+/* Solo hover en dispositivos con puntero real: en movil el :hover "se queda
+   pegado" tras el primer toque y hacia parecer que el verde llegaba tarde. */
+@media (hover: hover) and (pointer: fine) {
+  .category-btn:hover {
+    background-color: var(--color-gray-200);
+  }
 }
 
-/* Feedback inmediato al pulsar (tactil): el navegador no siempre aplica
-   :hover/:active al hacer tap, asi que JS añade esta clase al instante. */
-.category-btn--pressed {
+/* El verde se pinta por la presencia de CUALQUIERA de estas clases, con la
+   misma especificidad (clase + elemento). No depende del orden del CSS ni de
+   !important, asi que no hay estado posible que deje el chip sin color. */
+.category-btn:active,
+.category-btn--pressed,
+.category-btn--active {
   background-color: var(--color-primary);
   color: var(--color-white);
 }
 
-.category-btn--active,
-.category-btn--pressed {
-  background-color: var(--color-primary);
-  color: var(--color-white);
+/* Foco visible para teclado (no afecta al tacto). */
+.category-btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Estado activo SIN verde: se usa mientras la pagina anterior sigue visible
