@@ -63,49 +63,20 @@ showToast(`"${product.nombre}" está agotado`, 'error');
 }
 });
 
-// Pinta un chip como seleccionado/pendiente AL INSTANTE (mismo tick del
-// evento nativo), sin depender de los listeners delegados de abajo: esos se
-// registran con addEventListener sin "capture", y si en el camino hay algun
-// listener anterior que llama a stopPropagation(), nunca llegan a correr. Por
-// eso el verde "aparecia tarde" (recien al volver de otra pagina, cuando el
-// render inicial ya ponia la clase --active).
-function paintChip(btn, cls) {
-if (!btn || btn.nodeType !== 1) return;
+// Marca un chip de categoria como activo (verde) de forma inmediata e
+// identica desde cualquier disparador (clic, tarjetas, busqueda, ?categoria=).
+// Antes cada sitio tocaba clases por su cuenta y el color "se veia tarde" en
+// tactil; ahora la marca ocurre sincronamente en el mismo toque.
+function setCategoryActive(btn) {
 document.querySelectorAll('.category-btn').forEach(b => {
 b.classList.remove('category-btn--active', 'category-btn--pending');
 b.removeAttribute('aria-pressed');
 });
-btn.classList.add(cls);
+if (btn) {
+btn.classList.add('category-btn--active');
 btn.setAttribute('aria-pressed', 'true');
 }
-
-function setCategoryActive(btn) {
-paintChip(btn, 'category-btn--active');
 }
-
-// --- Captura en fase (capture): corre ANTES que cualquier otro handler y
-// aunque alguien corte la propagacion. touchstart/pointerdown = feedback con
-// el dedo; mousedown solo si hay raton (en movil se dispara despues del tap y
-// podria "repintar" un chip viejo); teclado para accesibilidad.
-function handleChipPress(e) {
-const btn = e.target && e.target.closest ? e.target.closest('.category-btn') : null;
-if (!btn || btn.disabled) return;
-paintChip(btn, 'category-btn--pressed');
-}
-
-['pointerdown', 'touchstart'].forEach((type) => {
-document.addEventListener(type, handleChipPress, { passive: true, capture: true });
-});
-
-document.addEventListener('mousedown', (e) => {
-if (e.pointerType === 'touch') return; // ya cubierto por pointerdown/touchstart
-handleChipPress(e);
-}, { passive: true, capture: true });
-
-document.addEventListener('keydown', (e) => {
-if (e.key !== 'Enter' && e.key !== ' ') return;
-handleChipPress(e);
-}, { capture: true });
 
 // Cargar categorías y montar filtros
 async function loadCategories() {
@@ -125,8 +96,8 @@ filtersContainer.addEventListener('click', async (e) => {
 const btn = e.target.closest('.category-btn');
 if (!btn) return;
 
-// El toque YA pinto el chip en la fase de captura (pointerdown/touchstart);
-// aqui solo se consolida como estado activo definitivo.
+// Marcar SIEMPRE al instante: el toque se registra visualmente en el momento
+// (antes de esperar los datos), no cuando se entra o sale de otra pagina.
 setCategoryActive(btn);
 
 const categoryId = btn.dataset.categoryId;
