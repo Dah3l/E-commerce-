@@ -122,7 +122,7 @@
     </section>
 
     <!-- Filtros de Categoría -->
-    <section class="section section--light" id="categorias" aria-labelledby="categories-title">
+    <section class="section section--light section--compact" id="categorias" aria-labelledby="categories-title">
       <div class="container">
         <h2 id="categories-title" class="section__title">Categorías</h2>
         <div class="category-filters" role="group" aria-label="Filtros por categoría">
@@ -158,6 +158,10 @@
         <div class="products-grid" id="all-products">
           <!-- Se carga dinámicamente desde JS -->
         </div>
+
+        <!-- Paginación: se rellena desde JS (js/pages/home.js).
+             Solo hay paginación cuando la búsqueda/filtro devuelve más de 20 productos. -->
+        <nav class="pagination" id="pagination" aria-label="Paginación de productos" hidden></nav>
       </div>
     </section>
   </main>
