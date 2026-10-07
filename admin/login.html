@@ -37,16 +37,26 @@
     </div>
     
     <form class="admin-login__form" id="loginForm">
-      <div class="form-group">
+      <div class="form-group admin-login__password-group">
         <label for="password" class="form-label">Contraseña</label>
-        <input 
-          type="password" 
-          id="password" 
-          class="form-input" 
-          required
-          autocomplete="current-password"
-          placeholder="Ingrese su contraseña"
-        >
+        <div class="admin-login__password-field">
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input form-input--with-toggle" 
+            required
+            autocomplete="current-password"
+            placeholder="Ingrese su contraseña"
+          >
+          <button 
+            type="button" 
+            id="togglePassword" 
+            class="admin-login__password-toggle" 
+            aria-label="Mostrar contraseña"
+            aria-pressed="false"
+            title="Mostrar/ocultar contraseña"
+          >👁️</button>
+        </div>
       </div>
       
       <button type="submit" class="btn btn--primary admin-login__submit" id="loginBtn">
@@ -73,6 +83,17 @@
     const loginBtn = document.getElementById('loginBtn');
     const errorDiv = document.getElementById('loginError');
     const blockedDiv = document.getElementById('loginBlocked');
+    const togglePasswordBtn = document.getElementById('togglePassword');
+
+    // Mostrar/ocultar contraseña
+    togglePasswordBtn.addEventListener('click', () => {
+      const isVisible = passwordInput.type === 'text';
+      passwordInput.type = isVisible ? 'password' : 'text';
+      togglePasswordBtn.textContent = isVisible ? '\u{1F441}\u{FE0F}' : '\u{1F442}';
+      togglePasswordBtn.setAttribute('aria-label', isVisible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      togglePasswordBtn.setAttribute('aria-pressed', String(!isVisible));
+      passwordInput.focus();
+    });
 
     // Verificar si está bloqueado al cargar
     if (isLoginBlocked()) {
