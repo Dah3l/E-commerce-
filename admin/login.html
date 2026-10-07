@@ -39,21 +39,24 @@
     <form class="admin-login__form" id="loginForm">
       <div class="form-group admin-login__password-group">
         <label for="password" class="form-label">Contraseña</label>
-        <input 
-          type="password" 
-          id="password" 
-          class="form-input form-input--with-toggle" 
-          required
-          autocomplete="current-password"
-          placeholder="Ingrese su contraseña"
-        >
-        <button 
-          type="button" 
-          id="togglePassword" 
-          class="admin-login__password-toggle" 
-          aria-label="Mostrar contraseña"
-          aria-pressed="false"
-        >👁️</button>
+        <div class="admin-login__password-field">
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input form-input--with-toggle" 
+            required
+            autocomplete="current-password"
+            placeholder="Ingrese su contraseña"
+          >
+          <button 
+            type="button" 
+            id="togglePassword" 
+            class="admin-login__password-toggle" 
+            aria-label="Mostrar contraseña"
+            aria-pressed="false"
+            title="Mostrar/ocultar contraseña"
+          >👁️</button>
+        </div>
       </div>
       
       <button type="submit" class="btn btn--primary admin-login__submit" id="loginBtn">
