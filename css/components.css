@@ -317,6 +317,10 @@
   color: var(--color-gray-800);
   margin-bottom: 0;
   line-height: 1.4;
+  /* Altura fija de 2 líneas: así el precio queda siempre en la misma
+     posición, tenga el nombre 1 o 2 líneas (alinea las cards del grid) */
+  min-height: calc(2 * 1.4 * var(--font-size-base));
+  height: calc(2 * 1.4 * var(--font-size-base));
   
   /* Limitar a 2 líneas */
   display: -webkit-box;
@@ -330,6 +334,9 @@
   align-items: center;
   gap: var(--spacing-2);
   flex-wrap: wrap;
+  /* Empuja el bloque de precio hacia abajo (justo encima del botón),
+     alineándolo en la misma posición en todas las cards */
+  margin-top: auto;
 }
 
 .product-card__price--old {
@@ -360,6 +367,12 @@
 
 .product-card--skeleton .product-card__info {
   gap: var(--spacing-3);
+}
+
+/* El bloque de texto del skeleton ocupa lo mismo que código + título (2 líneas)
+   para que las cards de carga tengan la misma altura que las reales */
+.product-card--skeleton .product-card__info > .skeleton:first-child {
+  min-height: calc(var(--font-size-xs, 12px) * 1.5 + var(--spacing-2) + 2 * 1.4 * var(--font-size-base));
 }
 
 /* ============================================
