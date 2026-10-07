@@ -89,7 +89,7 @@
     togglePasswordBtn.addEventListener('click', () => {
       const isVisible = passwordInput.type === 'text';
       passwordInput.type = isVisible ? 'password' : 'text';
-      togglePasswordBtn.textContent = '\u{1F441}\u{FE0F}';
+      togglePasswordBtn.textContent = isVisible ? '\u{1F441}\uFE0F' : '\u{1F648}';
       togglePasswordBtn.setAttribute('aria-label', isVisible ? 'Mostrar contraseña' : 'Ocultar contraseña');
       togglePasswordBtn.setAttribute('aria-pressed', String(!isVisible));
       passwordInput.focus();
