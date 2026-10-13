@@ -537,21 +537,38 @@ export function toggleMobileMenu(show) {
   const body = document.body;
   
   if (show) {
+    // Sincronizar aria-expanded en TODAS las hamburguesas del documento: si
+    // queda alguna duplicada (markup antiguo + header inyectado por JS), un
+    // boton desincronizado animaba el icono a medias y "rompia" la transicion.
+    document.querySelectorAll('.hamburger-btn').forEach(b => b.setAttribute('aria-expanded', 'true'));
     menu?.classList.add('mobile-nav--open');
     overlay?.classList.add('nav-overlay--show');
     // Bloqueo de scroll con position:fixed (ver body.mobile-nav-open en
     // layout.css). overflow:hidden sobre el body romperia el sticky-footer
     // (el body es flexbox columna para que el footer quede al pie).
-    body.style.setProperty('--scroll-lock-y', `${window.scrollY}px`);
+    // En desktop el body NO se fija (position:static via media query en
+    // layout.css), asi que no hace falta guardar la posicion de scroll.
+    if (window.innerWidth < 1024) {
+      body.style.setProperty('--scroll-lock-y', `${window.scrollY}px`);
+    }
     body.classList.add('mobile-nav-open');
   } else {
+    document.querySelectorAll('.hamburger-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
     menu?.classList.remove('mobile-nav--open');
     overlay?.classList.remove('nav-overlay--show');
     if (body.classList.contains('mobile-nav-open')) {
       const lockY = parseFloat(body.style.getPropertyValue('--scroll-lock-y')) || 0;
       body.classList.remove('mobile-nav-open');
       body.style.removeProperty('--scroll-lock-y');
-      window.scrollTo(0, lockY);
+      // Solo restaurar el scroll si realmente se habia bloqueado con fixed
+      // (movil). En desktop el body nunca salio del flujo y llamar a
+      // window.scrollTo aqui provocaba un salto/re-animacion del desplegable.
+      if (window.innerWidth < 1024 && Math.abs(window.scrollY - lockY) > 1) {
+        // behavior:'auto' para saltar INSTANTANEAMENTE a la posicion guardada:
+        // con html{scroll-behavior:smooth} el navegador animaba el "regreso"
+        // al cerrar el menu, lo que se veia como una animacion rota.
+        window.scrollTo({ top: lockY, behavior: 'auto' });
+      }
     }
     body.style.overflow = '';
   }
@@ -582,6 +599,16 @@ export function initMobileMenu() {
       return;
     }
     if (e.target.closest('.mobile-nav__item')) {
+      // El menu ya esta abierto y el clic es en un ENLACE de navegacion: dejar
+      // que el navegador navegue. Cerrarlo aqui hacia "saltar" la animacion a
+      // medias antes del cambio de pagina (una de las causas de la animacion
+      // rota). En pantallas pequenas el bloqueo de scroll se libera al
+      // descargar la nueva pagina; en desktop no hay bloqueo.
+      const mobileNav = document.querySelector('.mobile-nav');
+      if (mobileNav && mobileNav.classList.contains('mobile-nav--open')
+          && e.target.closest('a[href]')) {
+        return;
+      }
       toggleMobileMenu(false);
       return;
     }
