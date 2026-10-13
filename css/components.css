@@ -714,10 +714,36 @@
   padding-right: 50px;
   font-family: inherit;
   font-size: var(--font-size-base);
+  color: var(--color-text);
+  caret-color: var(--color-text);
   border: 2px solid var(--color-gray-300);
   border-radius: var(--radius-full);
   background-color: var(--color-surface);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Placeholder del buscador. IMPORTANTE: definirlo explicitamente por clase,
+   porque los placeholders son un pseudo-elemento propio del input y NO
+   heredan el color del texto; sin esto el navegador pinta el placeholder con
+   su gris por defecto (casi negro sobre el fondo oscuro del modo oscuro). */
+.search-input::placeholder {
+  color: var(--color-gray-500);
+  opacity: 1; /* Firefox atenúa los placeholders por defecto */
+}
+
+:root[data-theme="dark"] .search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* El buscador no es .form-input, así que también cubrimos cualquier otro
+   input de búsqueda por si se reutiliza el patrón en otras vistas. */
+input[type="search"]::placeholder {
+  color: var(--color-gray-500);
+  opacity: 1;
+}
+
+:root[data-theme="dark"] input[type="search"]::placeholder {
+  color: var(--color-text-muted);
 }
 
 .search-input:focus {

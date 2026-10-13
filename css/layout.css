@@ -17,6 +17,18 @@ body.mobile-nav-open {
   overflow: hidden;
 }
 
+/* En desktop el bloqueo de scroll NO debe usar position:fixed en el body:
+   al "desaparecer" el header fijo momentáneamente (y volver a colocarse al
+   cerrar) se notaba un salto/re-animación del desplegable. Con overflow:hidden
+   basta para impedir el scroll y todo queda en su sitio. */
+@media (min-width: 1024px) {
+  body.mobile-nav-open {
+    position: static;
+    top: auto;
+    overflow: hidden;
+  }
+}
+
 /* ============================================
    HEADER / NAVEGACIÓN
    ============================================ */
@@ -220,23 +232,34 @@ body {
   font-size: var(--font-size-xl);
 }
 
-/* Overlay para menú móvil lateral (si se usa) */
-.nav-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: calc(var(--z-fixed) - 1);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity var(--transition-base), visibility var(--transition-base);
+/* Overlay para menú móvil lateral. SOLO en pantallas < 1024px: en desktop el
+   desplegable es una tarjeta flotante y un overlay a pantalla completa tapaba
+   la página, provocando dobles cierres/clics fantasma que "rompían" la
+   animación de apertura del botón hamburguesa. */
+@media (max-width: 1023.98px) {
+  .nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: calc(var(--z-fixed) - 1);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+  }
+
+  .nav-overlay--show {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
-.nav-overlay--show {
-  opacity: 1;
-  visibility: visible;
+@media (min-width: 1024px) {
+  .nav-overlay {
+    display: none !important;
+  }
 }
 
 /* ============================================
@@ -416,21 +439,17 @@ body {
      rellenos verticales extra del contenedor. */
   padding: 0;
   margin-bottom: var(--spacing-4);
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-300) transparent;
+  /* Scroll habilitado pero SIN barra visible (scrollbar-width:none en Firefox,
+     ::-webkit-scrollbar{display:none} abajo en Chrome/Safari/Edge). */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
+/* Ocultar la barra de scroll nativa manteniendo el desplazamiento */
 .category-filters::-webkit-scrollbar {
-  height: 6px;
-}
-
-.category-filters::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.category-filters::-webkit-scrollbar-thumb {
-  background-color: var(--color-gray-300);
-  border-radius: var(--radius-full);
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 @media (min-width: 768px) {
@@ -536,6 +555,18 @@ body {
   scroll-snap-type: x mandatory;
   padding-bottom: var(--spacing-2, 8px);
   -webkit-overflow-scrolling: touch;
+  /* Scroll habilitado pero SIN barra visible (igual que los chips de
+     categorías): scrollbar-width:none en Firefox y ::-webkit-scrollbar
+     oculto abajo en Chrome/Safari/Edge. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Ocultar la barra de scroll nativa manteniendo el desplazamiento */
+.products-grid--scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .products-grid--scroll > * {
