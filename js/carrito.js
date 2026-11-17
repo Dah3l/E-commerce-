@@ -5,6 +5,7 @@
 
 import { formatPrice } from './utils.js';
 import { formatUsd, formatCup } from './moneda.js';
+import { getActiveGestor } from './referidos.js';
 
 const CART_STORAGE_KEY = 'shopping_cart';
 
@@ -246,6 +247,10 @@ export function generateWhatsAppMessage(whatsappNumber, currency) {
   
   message += '─────────────────\n';
   message += `*TOTAL: ${dualPrice(subtotal)}*\n\n`;
+  const gestor = getActiveGestor();
+  if (gestor) {
+    message += `Gestor: ${gestor.name}\n\n`;
+  }
   message += 'Gracias.';
   
   return message;
