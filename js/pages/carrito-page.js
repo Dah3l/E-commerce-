@@ -1,4 +1,5 @@
 import { getCartItems, addToCart, removeFromCart, updateQuantity, getCartSubtotal, clearCart } from '../carrito.js';
+import { getActiveGestor } from '../referidos.js';
 
 // Cache de productos (id -> producto) para conocer el stock al validar cantidades
 let productStockCache = {};
@@ -129,12 +130,14 @@ const usd = formatUsd(amount);
 const cup = formatCup(amount);
 return cup ? `${usd} ≈ ${cup}` : usd;
 };
+const gestor = getActiveGestor();
 const lines = [
 `¡Hola${config.nombre_negocio ? ' ' + config.nombre_negocio : ''}! 👋 Quiero hacer este pedido:`,
 '',
 ...items.map(i => `• ${i.cantidad} x ${i.nombre} — ${dualPrice(Number(i.precio) * (parseInt(i.cantidad, 10) || 1))}`),
 '',
-`*Total: ${dualPrice(getCartSubtotal())}*`
+`*Total: ${dualPrice(getCartSubtotal())}*`,
+...(gestor ? ['', `Gestor: ${gestor.name}`] : [])
 ];
 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
 });
