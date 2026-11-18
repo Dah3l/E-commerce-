@@ -1,5 +1,6 @@
 import { getProductById, getProductBySlug, getRelatedProducts, renderProductsGrid, setCurrency } from '../productos.js';
 import { addToCart, getCart } from '../carrito.js';
+import { getActiveGestor } from '../referidos.js';
 import { showToast, escapeHtml, renderSiteHeader, renderSiteFooter, initScrollTopButton, updateGlobalCartCount } from '../ui.js';
 import { formatPrice, getUrlParam, formatPlainText } from '../utils.js';
 import { getBizConfig, getCurrency, getWhatsAppNumber, getCupRate } from '../config-negocio.js';
@@ -220,11 +221,13 @@ const totalUsd = formatUsd(unitPrice * qty());
 const totalCup = formatCup(unitPrice * qty());
 // Total mostrado en ambas monedas (USD y CUP) cuando hay tasa configurada
 const total = totalCup ? `${totalUsd} ≈ ${totalCup}` : totalUsd;
+const gestor = getActiveGestor();
 const msg = [
 `¡Hola${bizConfig.nombre_negocio ? ' ' + bizConfig.nombre_negocio : ''}! 👋`,
 `Quiero comprar: *${qty()} x ${product.nombre}*`,
 `Precio unitario: ${formatUsd(unitPrice)}${(() => { const c = formatCup(unitPrice); return c ? ' ≈ ' + c : ''; })()}`,
 `Total: ${total}`,
+...(gestor ? [`Gestor: ${gestor.name}`] : []),
 '',
 `${window.location.origin}${window.location.pathname.replace('[^/]*$','')}producto.html?id=${product.id}`
 ].join('\n');
